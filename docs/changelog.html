@@ -34,7 +34,6 @@
     <div class="sidebar-section">
       <div class="sidebar-label">Geplant</div>
       <a href="#v0-3">v0.3 – Vollanalyse</a>
-      <a href="#sprint-g">Sprint G – Analyse-Präzision</a>
     </div>
   </aside>
 
@@ -54,6 +53,37 @@
       <div id="unreleased" class="timeline-item section-anchor">
         <div class="timeline-version">[Unveröffentlicht] <span class="version-badge v02">In Arbeit</span></div>
         <div class="timeline-date">Hauptbranch</div>
+
+        <h4 class="text-green">Bugfix – Geschwindigkeitsphantomwerte + DF-Fehler bei schnellem Tölt</h4>
+        <ul>
+          <li><strong>Phantom-Speed entfernt:</strong> Der <code>_speed_dx_norm</code>-Fallback (bbox-Mittelpunkt-Bewegung) lieferte ~2,2 km/h auch bei statischen Videos, weil er Kameraschwenks nicht von echter Pferd-Bewegung trennte. Der Fallback wurde vollständig entfernt. Geschwindigkeitsschätzung erfolgt jetzt ausschließlich über <strong>Schrittlänge × Schrittfrequenz</strong> (<code>v = stride_length_m × stride_freq_hz</code>) – nur aktiv wenn <code>stockmass_cm</code> angegeben und Foot-On-Events detektierbar.</li>
+          <li><strong>DF-Inflation bei schnellem Tölt behoben:</strong> Bei hoher Geschwindigkeit ist der Hufhub sehr klein – der Fesselgelenk-Y-Wert erreicht die bbox-Oberkante kaum, was zu aufgeblasenem Duty Factor führte und das Pferd fälschlicherweise als „Schritt" klassifizierte. Fix: DF-Schwellenwert wird jetzt über Perzentile der tatsächlichen Y-Trajektorie berechnet (<code>np.percentile(y_traj, 80)</code> als Stance-Schwelle) statt fester Grenze.</li>
+          <li><strong>Bodenlinie plausibilitätsgeprüft:</strong> <code>_ground_line_trusted()</code> gibt nur dann <code>True</code> zurück, wenn <code>max(ground_buf) ≥ 0.92</code> – der Huf muss mindestens einmal wirklich den bbox-Boden erreicht haben. Verhindert fehlerhafte Foot-On-Erkennung bei Kameraausschnitten, in denen Hufe nie vollständig sichtbar sind.</li>
+        </ul>
+
+        <h4 class="text-green">Bugfix – Keypoint-Lag (requestVideoFrameCallback)</h4>
+        <ul>
+          <li><strong>rAF-Loop durch <code>requestVideoFrameCallback</code> ersetzt:</strong> Die bisherige <code>requestAnimationFrame</code>-Schleife zum Rendern von Keypoints über dem Video-Element synchronisierte auf den Bildschirm-Vsync, nicht auf den Video-Frame. Das führte bei 25-fps-Videos auf 60-Hz-Monitoren zu periodischem 1-Frame-Lag. Ersetzen durch <code>video.requestVideoFrameCallback()</code> mit <code>metadata.mediaTime</code>-Auswertung synchronisiert Keypoints exakt auf den gerade gezeigten Frame. Look-ahead-Cache (PREFETCH_AHEAD=3 Frames) für <code>/api/keypoints/{id}/{nr}</code>-Requests bleibt aktiv.</li>
+        </ul>
+
+        <h4 class="text-green">Annotations-Tool Quick Wins</h4>
+        <ul>
+          <li><strong>A/D Tastatur-Navigation:</strong> <code>A</code> / <code>D</code> im Annotations-Tool springen ±1 Frame; <code>Shift+A</code> / <code>Shift+D</code> springen ±<code>FRAME_STEP</code> (konfigurierbar, Standard 10).</li>
+          <li><strong>Undo/Redo (Ctrl+Z / Ctrl+Y):</strong> Bis zu 50 Schritte rückgängig machbar. History-Stack im Annotations-Tool-State; gilt für Keypoint-Verschiebung, bewaffnete Platzierung und Konfidenz-Änderungen.</li>
+          <li><strong>Tab → niedrigster-Konfidenz-Keypoint:</strong> Tab-Taste springt automatisch zum Keypoint mit der niedrigsten Konfidenz im aktuellen Frame – beschleunigt systematische Qualitätsprüfung erheblich.</li>
+          <li><strong>Tastatur-Legende in Sidebar:</strong> Alle Shortcuts dauerhaft in der rechten Sidebar des Annotations-Tools aufgelistet.</li>
+        </ul>
+
+        <h4 class="text-green">.env.example + Docker-Compose-Cleanup</h4>
+        <ul>
+          <li><strong>.env.example:</strong> Neue Datei mit allen erforderlichen Umgebungsvariablen als Template (<code>SECRET_KEY</code>, <code>DATABASE_URL</code>, <code>POSTGRES_PASSWORD</code>, <code>CORS_ORIGINS</code>, TTL-Werte). <code>docker-compose.yml</code> liest Secrets aus <code>.env</code> statt hardkodierter Werte – GitHub-sicher.</li>
+          <li><strong>README Schnellstart aktualisiert:</strong> <code>cp .env.example .env</code> als erster Schritt vor <code>docker compose up</code>.</li>
+        </ul>
+
+        <h4 class="text-green">is_analyzable-Flag</h4>
+        <ul>
+          <li><strong>Nicht-auswertbare Frames markiert:</strong> Frames, bei denen das Pferd nicht seitlich zur Kamera steht (Frontalansicht, Wegansicht) oder die Bbox zu klein ist, erhalten <code>is_analyzable=False</code> in der DB. Diese Frames liefern keine Keypoints und werden in der TaktTimeline ausgegraut dargestellt.</li>
+        </ul>
 
         <h4 class="text-green">Sprint L – Training-Tab in Admin verschoben</h4>
         <ul>
@@ -369,20 +399,6 @@
           <li>Zusätzliche Keypoints: Sprunggelenk ×2, Kniegelenk HB ×2</li>
           <li>ML-basierte Gangart-Klassifikation (LSTM/1D-CNN) statt Regelwerk</li>
           <li>Trab-, Schritt- und Galopp-Analyse-Basis</li>
-        </ul>
-      </div>
-
-      <!-- SPRINT G GEPLANT -->
-      <div id="sprint-g" class="timeline-item section-anchor">
-        <div class="timeline-version">Sprint G <span class="version-badge" style="background:var(--surface2);color:var(--muted)">Geplant</span></div>
-        <div class="timeline-date">Nächster Sprint</div>
-
-        <h4>Analyse-Präzision – Bodenreferenz + Geschwindigkeit</h4>
-        <ul>
-          <li><strong>G1 – Bodenebene als Foot-On-Referenz:</strong> Rollendes Minimum der Fesselgelenk-Y-Werte (relativ zur Bbox, Zeitfenster ~2 s) als lokale Bodenlinie. Foot-On wird erkannt, wenn das Fesselgelenk die Bodenlinie erreicht – robuster als rohes Peak-Maximum. Funktioniert für ovale, ebene Bahnen ohne Steigung (&gt;90% der Videos).</li>
-          <li><strong>G2 – Stockmaß-Eingabe:</strong> Optionales Feld in der Upload-UI. Wird in der DB gespeichert (<code>videos.stockmass_cm</code>).</li>
-          <li><strong>G3 – Geschwindigkeitsschätzung:</strong> Formel <code>speed = (Δx_px / bbox_height_px) × stockmaß_m × fps</code> – distanzinvariant, da Kameraabstand sich in Zähler und Nenner herauskürzt. Nur auf Seitenansicht-Frames. Rennpass eindeutig erkennbar bei &gt;8 m/s.</li>
-          <li><strong>G4 – Anzeige in Score-Cards:</strong> Geschwindigkeitsband in ToltScoreCard / RennpassScoreCard; Plausibilitätsprüfung (z.B. LAP=Tölt aber speed &lt; 2 m/s → Hinweis „eher Schritt").</li>
         </ul>
       </div>
 

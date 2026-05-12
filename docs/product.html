@@ -48,6 +48,9 @@
       <a href="#sprint-h">Sprint H – i18n</a>
       <a href="#sprint-i">Sprint I – WCAG 2.1 AA</a>
       <a href="#sprint-j">Sprint J – 1-Klick-Training</a>
+      <a href="#sprint-k">Sprint K – Gangart-Multiselect</a>
+      <a href="#sprint-l">Sprint L – Training in Admin</a>
+      <a href="#sprint-bugfixes">Bugfixes &amp; Quick Wins</a>
     </div>
     <div class="sidebar-section">
       <div class="sidebar-label">Backlog</div>
@@ -460,6 +463,126 @@
       </div>
     </section>
 
+    <section id="sprint-k" class="section-anchor">
+      <h2>Sprint K – Gangart-Multiselect &amp; UI-Cleanup <span class="status-pill status-done" style="font-size:.75rem;">Abgeschlossen</span></h2>
+      <p style="color:var(--muted);">
+        <strong>Ziel:</strong> Upload-Formular unterstützt mehrere Gangarten pro Video; TrainingManager-UI vereinfacht.
+      </p>
+      <div class="sprint-card">
+        <div class="sprint-header">
+          <span class="sprint-tag sprint-tag-active">Sprint K</span>
+          <strong>Gangart-Multiselect + Upload-UX</strong>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Story</th><th>Beschreibung</th><th>SP</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>US-K1</td>
+              <td><strong>Gangart-Multiselect:</strong> Checkbox-Gruppe mit allen 5 Gangarten im Upload-Formular; mehrere Gangarten kommagetrennt (<code>gait_label: "Tölt,Trab"</code>); Submit blockiert wenn Lernfreigabe aktiv ohne Auswahl</td>
+              <td><span class="sp-badge">3</span></td>
+              <td><span class="status-pill status-done">✓ Fertig</span></td>
+            </tr>
+            <tr>
+              <td>US-K2</td>
+              <td><strong>TrainingUpload aus TrainingManager entfernt:</strong> Separater Upload-Bereich aus TrainingManager entfernt; regulärer Upload-Flow mit Lernfreigabe-Checkbox als Ersatz</td>
+              <td><span class="sp-badge">2</span></td>
+              <td><span class="status-pill status-done">✓ Fertig</span></td>
+            </tr>
+            <tr>
+              <td>US-K3/K4</td>
+              <td><strong>Gait-Labels als Pills:</strong> Kommagetrennte Labels in VideoLibrary und Video-Detail-Screen als einzelne Pills dargestellt</td>
+              <td><span class="sp-badge">2</span></td>
+              <td><span class="status-pill status-done">✓ Fertig</span></td>
+            </tr>
+          </tbody>
+        </table></div>
+      </div>
+    </section>
+
+    <section id="sprint-l" class="section-anchor">
+      <h2>Sprint L – Training-Tab in Admin verschoben <span class="status-pill status-done" style="font-size:.75rem;">Abgeschlossen</span></h2>
+      <p style="color:var(--muted);">
+        <strong>Ziel:</strong> Training-Bereich gehört konzeptuell in den Admin-Bereich – kein separater Header-Tab mehr.
+      </p>
+      <div class="sprint-card">
+        <div class="sprint-header">
+          <span class="sprint-tag sprint-tag-active">Sprint L</span>
+          <strong>Navigation-Cleanup</strong>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Story</th><th>Beschreibung</th><th>SP</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>US-L1</td>
+              <td><strong>Training-Tab entfernt:</strong> Separater „Training"-Button aus Header-Navigation entfernt; <code>'training'</code>-Screen aus <code>App.tsx</code> ausgebaut</td>
+              <td><span class="sp-badge">1</span></td>
+              <td><span class="status-pill status-done">✓ Fertig</span></td>
+            </tr>
+            <tr>
+              <td>US-L2</td>
+              <td><strong>Training in AdminPanel:</strong> <code>LernStatus</code> + <code>TrainingManager</code> am Anfang des AdminPanel eingebunden; Rollback weiterhin erreichbar</td>
+              <td><span class="sp-badge">1</span></td>
+              <td><span class="status-pill status-done">✓ Fertig</span></td>
+            </tr>
+          </tbody>
+        </table></div>
+      </div>
+    </section>
+
+    <section id="sprint-bugfixes" class="section-anchor">
+      <h2>Bugfixes &amp; Quick Wins <span class="status-pill status-done" style="font-size:.75rem;">Abgeschlossen</span></h2>
+      <p style="color:var(--muted);">
+        <strong>Ziel:</strong> Analyse-Präzision verbessern, Keypoint-Rendering lag-frei, Annotationstool ergonomischer.
+      </p>
+      <div class="sprint-card">
+        <div class="sprint-header">
+          <span class="sprint-tag sprint-tag-active">Fixes</span>
+          <strong>Analyse + Rendering + Annotations-UX</strong>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Story</th><th>Beschreibung</th><th>SP</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>BF-1</td>
+              <td><strong>Phantom-Speed behoben:</strong> <code>_speed_dx_norm</code>-Fallback (Bbox-Bewegung) lieferte ~2,2 km/h bei statischen Videos → entfernt; Geschwindigkeit nur noch über Schrittlänge × Schrittfrequenz</td>
+              <td><span class="sp-badge">3</span></td>
+              <td><span class="status-pill status-done">✓ Fertig</span></td>
+            </tr>
+            <tr>
+              <td>BF-2</td>
+              <td><strong>DF-Perzentil-Fix:</strong> Aufgeblasener Duty Factor bei schnellem Tölt → Tölt wurde als Schritt klassifiziert; DF-Schwellenwert jetzt Perzentil-basiert (<code>np.percentile(y_traj, 80)</code>)</td>
+              <td><span class="sp-badge">3</span></td>
+              <td><span class="status-pill status-done">✓ Fertig</span></td>
+            </tr>
+            <tr>
+              <td>BF-3</td>
+              <td><strong>Bodenlinie plausibilitätsgeprüft:</strong> <code>max(ground_buf) ≥ 0.92</code> vor Nutzung der Bodenlinie – verhindert fehlerhafte Foot-On bei abgeschnittenen Hufen</td>
+              <td><span class="sp-badge">2</span></td>
+              <td><span class="status-pill status-done">✓ Fertig</span></td>
+            </tr>
+            <tr>
+              <td>BF-4</td>
+              <td><strong>requestVideoFrameCallback:</strong> rAF-Loop durch <code>requestVideoFrameCallback</code> + <code>metadata.mediaTime</code> ersetzt → Keypoints exakt frame-synchron, kein vsync-Lag mehr</td>
+              <td><span class="sp-badge">3</span></td>
+              <td><span class="status-pill status-done">✓ Fertig</span></td>
+            </tr>
+            <tr>
+              <td>BF-5</td>
+              <td><strong>is_analyzable-Flag:</strong> Frames ohne Seitenansicht (frontal/weg) oder zu kleiner Bbox erhalten <code>is_analyzable=False</code>; TaktTimeline graut diese Frames aus</td>
+              <td><span class="sp-badge">2</span></td>
+              <td><span class="status-pill status-done">✓ Fertig</span></td>
+            </tr>
+            <tr>
+              <td>BF-6</td>
+              <td><strong>Annotations-Quick-Wins:</strong> A/D Tastatur-Navigation (±1/±STEP Frame), Undo/Redo (Ctrl+Z/Y, 50 Schritte), Tab → niedrigster-Konfidenz-KP, Tastatur-Legende in Sidebar</td>
+              <td><span class="sp-badge">5</span></td>
+              <td><span class="status-pill status-done">✓ Fertig</span></td>
+            </tr>
+          </tbody>
+        </table></div>
+      </div>
+    </section>
+
     <!-- ROADMAP -->
     <section id="roadmap" class="section-anchor">
       <h2>Release-Roadmap</h2>
@@ -495,6 +618,12 @@
             <td><span class="status-pill status-done">Abgeschlossen</span></td>
             <td>Verbessern</td>
             <td>i18n DE/EN (Sprint H), WCAG 2.1 AA Barrierefreiheit (Sprint I), 1-Klick-Training (Sprint J1)</td>
+          </tr>
+          <tr>
+            <td><strong>Post-v1.0 – Qualität</strong></td>
+            <td><span class="status-pill status-done">Abgeschlossen</span></td>
+            <td>Präzision &amp; UX</td>
+            <td>requestVideoFrameCallback (kein Keypoint-Lag), Stride-Speed (kein Phantom), DF-Perzentil-Fix, is_analyzable-Flag, Annotations-Quick-Wins (A/D, Undo/Redo, Tab), .env.example, Sprint K (Multiselect), Sprint L (Admin-Cleanup)</td>
           </tr>
         </tbody>
       </table></div>
@@ -575,7 +704,7 @@
         <thead><tr><th>Story</th><th>Beschreibung</th><th>SP</th><th>Status</th></tr></thead>
         <tbody>
           <tr><td>US-7.1</td><td>E-Mail + Passwort, JWT, Passwort-Reset</td><td>5</td><td><span class="status-pill status-done">✓ Login/Register Modal in App.tsx verdrahtet (Passwort-Reset noch offen)</span></td></tr>
-          <tr><td>US-7.2</td><td>DSGVO: Datenlöschung, kein Training ohne Zustimmung</td><td>3</td><td><span class="status-pill status-wip">~ Backend-Logik vorhanden, Frontend Sprint 3</span></td></tr>
+          <tr><td>US-7.2</td><td>DSGVO: Datenlöschung, kein Training ohne Zustimmung</td><td>3</td><td><span class="status-pill status-done">✓ Account-Löschung CASCADE, training_consent Guard</span></td></tr>
         </tbody>
       </table></div>
     </section>
@@ -620,6 +749,16 @@
           <tr><td>Keypoint-Overlay (VideoPlayer)</td><td>–</td><td>✓</td><td>✓</td></tr>
           <tr><td>Zoom/Pan Annotationstool</td><td>–</td><td>✓</td><td>✓</td></tr>
           <tr><td>Unsaved-Changes-Dialog</td><td>–</td><td>✓</td><td>✓</td></tr>
+          <tr><td>requestVideoFrameCallback (kein Keypoint-Lag)</td><td>–</td><td>✓ VideoPlayer</td><td>✓ Post-v1.0</td></tr>
+          <tr><td>Stride-Length Speed (kein Phantom-Speed)</td><td>✓ gait_detector._compute_speed()</td><td>✓ Score-Cards</td><td>✓ Post-v1.0</td></tr>
+          <tr><td>DF-Perzentil-Fix (kein falscher Schritt bei schnellem Tölt)</td><td>✓ gait_detector.py</td><td>–</td><td>✓ Post-v1.0</td></tr>
+          <tr><td>is_analyzable-Flag (Seitenansicht-Filter)</td><td>✓ video_processor.py</td><td>✓ TaktTimeline ausgegraut</td><td>✓ Post-v1.0</td></tr>
+          <tr><td>Annotations-Tastatur-Navigation (A/D, Shift+A/D)</td><td>–</td><td>✓ AnnotationTool</td><td>✓ Post-v1.0</td></tr>
+          <tr><td>Undo/Redo im Annotationstool (Ctrl+Z/Y, 50 Schritte)</td><td>–</td><td>✓ AnnotationTool</td><td>✓ Post-v1.0</td></tr>
+          <tr><td>Tab → niedrigster-Konfidenz-Keypoint</td><td>–</td><td>✓ AnnotationTool</td><td>✓ Post-v1.0</td></tr>
+          <tr><td>Gangart-Multiselect im Upload (Sprint K)</td><td>✓ API</td><td>✓ UploadZone Checkboxen</td><td>✓ Sprint K</td></tr>
+          <tr><td>Gait-Labels als Pills (Sprint K)</td><td>–</td><td>✓ VideoLibrary + Video-Detail</td><td>✓ Sprint K</td></tr>
+          <tr><td>.env.example + Docker-Compose-Secrets (GitHub-sicher)</td><td>✓</td><td>–</td><td>✓ Post-v1.0</td></tr>
         </tbody>
       </table></div>
     </section>

@@ -10,15 +10,18 @@ Töltonaut analysiert Videos von Islandpferden und macht Tölt-Qualität objekti
 
 ## Features
 
-- **Skelett-Overlay** – YOLOv8 + MMPose erkennen Pferd und zeichnen 17–22 Keypoints ein
-- **Gangart-Erkennung** – Tölt, Trab, Schritt, Galopp, Rennpass automatisch erkannt
-- **Tölt-Scoring** – FEIF-konforme Bewertung 0–10, Trabeinlagen, Pass-Einlagen, Takt-Regularität
+- **Skelett-Overlay** – YOLOv8 + MMPose erkennen Pferd und zeichnen 22 Keypoints ein (Horse-10 Schema)
+- **Gangart-Erkennung** – Tölt, Trab, Schritt, Galopp, Rennpass via LAP/DF-Biomechanik
+- **Tölt-Scoring** – FEIF-konforme Bewertung mit Subklassifikation (passig/korrekt/trabig), LAP, Duty Factor
 - **Rennpass-Scoring** – Lateral-Synchronizität, Schwebephase, Stride Count
-- **Takt-Timeline** – 4-spurige Huf-Landungs-Visualisierung (VL/VR/HL/HR)
-- **Annotationstool** – Keypoints manuell korrigieren, COCO-JSON exportieren
-- **Lernfähig** – Nutzereigene Videos verbessern das Modell
-- **i18n** – Deutsch und Englisch
-- **Island-Design** – Dark Mode mit Isländischer Farbpalette
+- **Takt-Timeline** – 4-spurige Huf-Landungs-Visualisierung (VL/VR/HL/HR), sync mit Video
+- **Geschwindigkeitsschätzung** – Schrittlänge × Schrittfrequenz, stockmaßnormiert
+- **Keypoint-Rendering** – Lag-freie Darstellung via `requestVideoFrameCallback`
+- **Annotationstool** – Keypoints manuell korrigieren mit Zoom/Pan, Undo/Redo, Tastatur-Navigation, COCO-JSON-Export
+- **Lernfähig** – Nutzereigene Videos verbessern das Modell (1-Klick Fine-tuning, Rollback)
+- **i18n** – Deutsch und Englisch (react-i18next)
+- **Auth** – JWT-Login/Register, Account-Löschung (DSGVO)
+- **Island-Design** – Dark Mode mit Isländischer Farbpalette, WCAG 2.1 AA
 
 ---
 
@@ -49,6 +52,10 @@ Töltonaut analysiert Videos von Islandpferden und macht Tölt-Qualität objekti
 # Repository klonen
 git clone <repo-url>
 cd Töltonaut
+
+# Umgebungsvariablen einrichten (JWT-Secret und DB-Passwort)
+cp .env.example .env
+# .env öffnen und SECRET_KEY setzen
 
 # Alle Services starten
 docker compose up
@@ -108,17 +115,21 @@ output:
   ttl_hours: 24                # Auto-Delete verarbeiteter Videos nach N Stunden
 ```
 
-### Umgebungsvariablen
+### Umgebungsvariablen (.env)
+
+Kopiere `.env.example` zu `.env` und passe die Werte an:
 
 | Variable | Beschreibung | Docker-Default |
 |---|---|---|
 | `DATABASE_URL` | PostgreSQL DSN (psycopg3) | `postgresql+psycopg://toeltonaut:toeltonaut@db:5432/toeltonaut` |
 | `UPLOADS_DIR` | Pfad für hochgeladene Videos | `/data/uploads` |
 | `OUTPUTS_DIR` | Pfad für verarbeitete Videos | `/data/outputs` |
-| `SECRET_KEY` | JWT-Signing-Key | `change-me-in-production` ⚠️ |
+| `SECRET_KEY` | JWT-Signing-Key | — ⚠️ **Pflicht in Produktion** |
 | `CORS_ORIGINS` | Erlaubte CORS-Origins (kommagetrennt) | `http://localhost:5173,http://localhost:3000` |
+| `OUTPUT_TTL_HOURS` | Auto-Delete nach N Stunden | `24` |
+| `UPLOAD_TTL_HOURS` | Upload-Datei nach Verarbeitung behalten | `0` (sofort löschen) |
 
-> **Produktion:** `SECRET_KEY` über Umgebungsvariable überschreiben, niemals den Default verwenden.
+> **Produktion:** `SECRET_KEY` in `.env` setzen – niemals den Default verwenden.
 
 ---
 
@@ -158,6 +169,7 @@ pip install -r requirements.txt
 
 export DATABASE_URL="postgresql+psycopg://toeltonaut:toeltonaut@localhost:5432/toeltonaut"
 export SECRET_KEY="dev-key"
+# oder: cp .env.example .env && source .env
 
 uvicorn app.main:app --reload --port 8000
 ```

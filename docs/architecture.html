@@ -253,8 +253,20 @@
         <strong>v0.2+:</strong> Geplante Ablösung durch einen LSTM- oder 1D-CNN-Klassifikator, trainiert auf Keypoint-Zeitreihen mit Gangart-Labels aus nutzereigenen Videos.
       </div>
 
-      <h3>Geschwindigkeitsschätzung (Sprint G)</h3>
-      <p>Der <code>GaitDetector</code> berechnet ab Sprint G <code>speed_ms</code> (m/s) über <code>_compute_speed()</code>: Median von <code>|Δx| / bbox_h × stockmaß_m × effective_fps</code>. Die Formel ist distanzinvariant – Kameraabstand kürzt sich raus, da Bbox-Höhe und Δx gleichzeitig mit 1/Distanz skalieren. Das Ergebnis wird in <code>GaitResult</code>, <code>JobState</code>, <code>JobStatus</code> und <code>VideoListItem</code> propagiert und in <code>ToltScoreCard</code> / <code>RennpassScoreCard</code> mit Farbcodierung und Plausibilitätshinweisen angezeigt. Voraussetzung: <code>videos.stockmass_cm</code> wurde beim Upload angegeben.</p>
+      <h3>Duty Factor – Perzentil-Berechnung</h3>
+      <p>Der Duty-Factor-Schwellenwert (Grenze Standphase/Schwungphase) wird nicht mehr fest gesetzt, sondern adaptiv per <code>np.percentile(y_traj, 80)</code> aus der tatsächlichen Fesselgelenk-Trajektorie des aktuellen Fensters berechnet. Bei schnellem Tölt ist der Hufhub gering – ein fester Schwellenwert überschätzte die Standphase und klassifizierte das Pferd fälschlicherweise als „Schritt". Die Perzentil-Methode passt sich automatisch an die Bewegungsamplitude an.</p>
+
+      <h3>Bodenlinie – Plausibilitätsprüfung</h3>
+      <p>Die dynamische Bodenlinie (Rolling-Maximum-Buffer der Fesselgelenk-Y-Werte) wird nur dann für Foot-On-Detektion genutzt, wenn <code>max(ground_buf) ≥ 0.92</code> (<code>_ground_line_trusted()</code>). Diese Bedingung stellt sicher, dass der Huf mindestens einmal den bbox-Boden tatsächlich erreicht hat – bei Kameraausschnitten mit abgeschnittenen Hufen wäre die Bodenlinie unzuverlässig. Fallback: Peak-basierte Methode.</p>
+
+      <h3>Keypoint-Rendering (requestVideoFrameCallback)</h3>
+      <p>Das Frontend synchronisiert Keypoint-Overlays mit dem Video über die Browser-API <code>requestVideoFrameCallback()</code> + <code>metadata.mediaTime</code>. Die frühere <code>requestAnimationFrame</code>-Schleife synchronisierte auf den Bildschirm-Vsync (60 Hz), nicht auf den Video-Frame (25 fps) – das führte zu periodischem 1-Frame-Lag. Ein Look-ahead-Cache (PREFETCH_AHEAD=3) prefetcht <code>/api/keypoints/{id}/{nr}</code>-Requests für die nächsten Frames.</p>
+
+      <h3>Geschwindigkeitsschätzung</h3>
+      <p>Der <code>GaitDetector</code> berechnet <code>speed_ms</code> (m/s) über <code>_compute_speed()</code>: <code>v = stride_length_m × stride_freq_hz</code>. Schrittlänge wird aus dem mittleren Hufabstand (normiert auf Bbox-Höhe × Stockmaß) bestimmt, Schrittfrequenz aus den Foot-On-Event-Intervallen. Voraussetzung: <code>videos.stockmass_cm</code> beim Upload angegeben und mind. 2 Stride-Zyklen detektierbar. Das Ergebnis wird in <code>GaitResult</code>, <code>JobState</code>, <code>JobStatus</code> und <code>VideoListItem</code> propagiert und in <code>ToltScoreCard</code> / <code>RennpassScoreCard</code> mit Farbcodierung und Plausibilitätshinweisen angezeigt.</p>
+      <div class="callout callout-info">
+        <strong>Verworfen:</strong> Der frühere <code>_speed_dx_norm</code>-Ansatz (Bbox-Mittelpunkt-Bewegung, normiert auf Bbox-Höhe) lieferte ~2,2 km/h Phantom-Werte bei statischen Videos, weil Kameraschwenks nicht von echter Pferd-Bewegung unterschieden werden konnten. Er wurde vollständig durch die Schrittlänge-Methode ersetzt.
+      </div>
     </section>
 
     <!-- SCORING -->
@@ -319,6 +331,7 @@
                            │ video_id (FK → videos.job_id CASCADE) │
                            │ frame_nr                             │
                            │ timestamp_ms                         │
+                           │ is_analyzable (bool, default True)   │
                            │ UNIQUE (video_id, frame_nr)          │
                            └────┬──────────────┬──────────────────┘
                                 │ 1:N           │ 1:N

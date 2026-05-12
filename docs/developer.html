@@ -92,6 +92,10 @@
 git clone &lt;repo-url&gt;
 cd Töltonaut
 
+# Umgebungsvariablen einrichten (Pflicht vor dem ersten Start)
+cp .env.example .env
+# .env öffnen und SECRET_KEY setzen
+
 # Alle Services starten (erster Start lädt Images + baut Backend)
 docker compose up
 
@@ -189,6 +193,7 @@ npm run preview    # Produktions-Build lokal vorschauen</code></pre>
           <tr><td><code>camera_angle</code></td><td>string</td><td>–</td><td>seitlich_links | seitlich_rechts | schräg_vorn | schräg_hinten</td></tr>
           <tr><td><code>is_training_contribution</code></td><td>bool</td><td>–</td><td>Video für Training freigeben</td></tr>
           <tr><td><code>training_consent</code></td><td>bool</td><td>–</td><td>DSGVO-Zustimmung für Trainingsdaten</td></tr>
+          <tr><td><code>stockmass_cm</code></td><td>int</td><td>–</td><td>Stockmaß in cm (80–200), optional für Geschwindigkeitsschätzung</td></tr>
         </tbody>
       </table></div>
       <p><strong>Response:</strong> <code>{ "job_id": "uuid", "filename": "..." }</code></p>
@@ -298,6 +303,7 @@ npm run preview    # Produktions-Build lokal vorschauen</code></pre>
         <tr><td><span class="method method-get">GET</span></td><td><code>/api/keypoints/{job_id}/{frame_nr}</code></td></tr>
       </table></div>
       <p>Optionaler Query-Parameter <code>?ms=&lt;millisekunden&gt;</code>: Zeitbasierter Frame-Lookup – gibt Keypoints des Frames zurück, dessen <code>timestamp_ms</code> dem angegebenen Wert am nächsten liegt.</p>
+      <p>Antwort enthält <code>"is_analyzable": bool</code> – <code>false</code> wenn der Frame keine Seitenansicht liefert oder die Bbox zu klein ist. Das Frontend rendert in diesem Fall keine Keypoints und graut die TaktTimeline-Position aus.</p>
 
       <h3>Annotation speichern</h3>
       <div class="table-wrap"><table>
@@ -467,8 +473,11 @@ npm run preview    # Produktions-Build lokal vorschauen</code></pre>
       <h3><code>gait_detector.py</code> – GaitDetector</h3>
       <pre><code>class GaitDetector:
     def update(keypoints: list[tuple[int,int]], bbox: tuple[int,int,int,int], is_side_view: bool = True) → None
-    def detect() → GaitResult  # { name, confidence, note }</code></pre>
+    def detect() → GaitResult  # { name, confidence, note, speed_ms }</code></pre>
       <p>Arbeitet auf einem gleitenden 30-Frame-Fenster. Analysiert normalisierte Y-Positionen der Fesselgelenke (Horse-10-Indizes: <code>l_front=3, r_front=6, l_hind=14, r_hind=19</code>, Sprunggelenke <code>l_hock=13, r_hock=18</code>). Nur <code>is_side_view=True</code>-Frames fließen in die LAP/DF-Berechnung ein.</p>
+      <p><strong>DF-Berechnung:</strong> Duty-Factor-Schwellenwert wird per <code>np.percentile(y_traj, 80)</code> aus der tatsächlichen Fesselgelenk-Trajektorie bestimmt – verhindert DF-Inflation bei schnellem Tölt mit geringem Hufhub (alte feste Grenze führte zu falscher Schritt-Klassifikation).</p>
+      <p><strong>Bodenlinie:</strong> Rolling-Maximum-Buffer (~2 s) als dynamische Bodenlinie. Nur genutzt wenn <code>max(ground_buf) ≥ 0.92</code> (<code>_ground_line_trusted()</code>) – stellt sicher, dass Hufe im Bild wirklich den bbox-Boden erreichen.</p>
+      <p><strong>Geschwindigkeit:</strong> <code>_compute_speed()</code> berechnet <code>v = stride_length_m × stride_freq_hz</code> aus den Foot-On-Events. Nur aktiv wenn <code>stockmass_cm</code> gesetzt und mind. 2 Stride-Zyklen detektierbar. Der frühere <code>_speed_dx_norm</code>-Fallback (Bbox-Mittelpunktbewegung) wurde entfernt, da er Kameraschwenks nicht ausfiltern konnte.</p>
 
       <h3><code>tolt_scorer.py</code> – ToltScorer</h3>
       <pre><code>class ToltScorer:
@@ -558,6 +567,22 @@ ai:
 
       <h3>State-Management</h3>
       <p>Kein Redux oder Zustand-Library – State läuft in <code>App.tsx</code> per <code>useState</code>/<code>useEffect</code> und wird als Props nach unten gereicht. Auth-Token in <code>localStorage</code> via <code>auth.ts</code>.</p>
+
+      <h3>AnnotationTool – Tastatur-Shortcuts</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Taste</th><th>Aktion</th></tr></thead>
+          <tbody>
+            <tr><td><kbd>A</kbd> / <kbd>D</kbd></td><td>±1 Frame navigieren</td></tr>
+            <tr><td><kbd>Shift+A</kbd> / <kbd>Shift+D</kbd></td><td>±<code>FRAME_STEP</code> Frames (Standard: 10)</td></tr>
+            <tr><td><kbd>Ctrl+Z</kbd></td><td>Undo (bis 50 Schritte)</td></tr>
+            <tr><td><kbd>Ctrl+Y</kbd></td><td>Redo</td></tr>
+            <tr><td><kbd>Tab</kbd></td><td>Zum Keypoint mit niedrigster Konfidenz springen</td></tr>
+            <tr><td><kbd>Esc</kbd></td><td>Bewaffneten Modus verlassen / Dialog schließen</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Alle Shortcuts sind in der rechten Sidebar des AnnotationTools dauerhaft als Legende angezeigt.</p>
     </section>
 
     <!-- FRONTEND API -->
