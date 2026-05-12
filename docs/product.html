@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Produkt – Töltonaut Docs</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .sprint-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; margin-bottom: 1rem; }
+    .sprint-active { border-color: var(--green); }
+    .sprint-header { display: flex; align-items: center; gap: .7rem; margin-bottom: .75rem; }
+    .sprint-tag { padding: .2rem .6rem; border-radius: 4px; font-size: .72rem; font-weight: 700; }
+    .sprint-tag-active { background: var(--green); color: #1A1A2E; }
+    .sprint-tag-next { background: var(--surface2); color: var(--muted); }
+    .sprint-tag-later { background: var(--surface2); color: #555; }
+    .sp-badge { display: inline-block; background: var(--surface2); color: var(--muted); font-size: .72rem; padding: .1rem .4rem; border-radius: 3px; font-family: 'JetBrains Mono', monospace; margin-left: .4rem; }
+  </style>
+</head>
+<body>
+
+<nav class="topnav">
+  <span class="brand">Tölt<span>onaut</span> · Docs</span>
+  <nav>
+    <a href="index.html">Übersicht</a>
+    <a href="architecture.html">Architektur</a>
+    <a href="algorithm.html">Algorithmik</a>
+    <a href="developer.html">Entwickler</a>
+    <a href="product.html" class="active">Produkt</a>
+    <a href="user-manual.html">Handbuch</a>
+    <a href="changelog.html">Changelog</a>
+  </nav>
+</nav>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Vision</div>
+      <a href="#vision">Produktvision</a>
+      <a href="#scope">Scope</a>
+      <a href="#personas">Personas</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Sprints</div>
+      <a href="#sprint1">Sprint A – Analyse-UI</a>
+      <a href="#sprint2">Sprint B – MMPose + Export</a>
+      <a href="#sprint3">Sprint C/D – Tölt-Core + Fine-tuning</a>
+      <a href="#sprint-g">Sprint G – Analyse-Präzision</a>
+      <a href="#sprint-h">Sprint H – i18n</a>
+      <a href="#sprint-i">Sprint I – WCAG 2.1 AA</a>
+      <a href="#sprint-j">Sprint J – 1-Klick-Training</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Backlog</div>
+      <a href="#roadmap">Release-Roadmap</a>
+      <a href="#epics">Alle Epics</a>
+      <a href="#feature-status">Feature-Status</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Domäne</div>
+      <a href="#gaits">Die 5 Gangarten</a>
+      <a href="#feif">FEIF-Bewertung</a>
+      <a href="#tolt-criteria">Tölt-Kriterien</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Strategie</div>
+      <a href="#ml-strategy">ML-Strategie</a>
+      <a href="#data">Trainingsdaten</a>
+      <a href="#learning-loop">Lern-Loop</a>
+    </div>
+  </aside>
+
+  <main class="content">
+    <div class="page-header">
+      <span class="page-badge badge-pm">Produkt</span>
+      <h1>Produktdokumentation
+        <span class="subtitle">Vision, aktive Sprints, Epics und Domänenwissen</span>
+      </h1>
+    </div>
+
+    <!-- VISION -->
+    <section id="vision" class="section-anchor">
+      <h2>Produktvision</h2>
+      <div class="card" style="border-color: var(--primary);">
+        <p style="font-size:1.15rem; font-style:italic; color:var(--white); margin:0;">
+          „Tölt-Qualität objektiv messbar machen – für Reiter, Trainer und Richter im Islandpferdesport."
+        </p>
+      </div>
+      <p>Töltonaut ist eine KI-gestützte Bewegungsanalyse-Plattform für den professionellen Islandpferdesport. Nutzer laden Videos hoch; die KI erkennt Skelett, Gelenke und die aktuelle Gangart und visualisiert Bewegungsmuster mit FEIF-konformem Scoring.</p>
+      <p><strong>Projekttyp:</strong> Hobby-Projekt, nicht-kommerziell.</p>
+    </section>
+
+    <!-- SCOPE -->
+    <section id="scope" class="section-anchor">
+      <h2>Scope</h2>
+      <div class="card-grid">
+        <div class="card">
+          <h4 class="text-green">✓ In Scope (v1)</h4>
+          <ul style="margin-left:1rem;">
+            <li>Islandpferde</li>
+            <li>Alle 5 Gangarten (Tölt priorisiert)</li>
+            <li>Einzel-Pferd-Analyse, Videoanalyse</li>
+            <li>LAP/DF Biomechanik-Metriken (v0.2)</li>
+            <li>FEIF-Tölt-Subklassifikation (passig/trabig)</li>
+            <li>Browser-Annotationstool, Lern-Loop</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4 class="text-red">✗ Out of Scope v1</h4>
+          <ul style="margin-left:1rem;">
+            <li>Reiter-Analyse</li>
+            <li>Multi-Pferd-Analyse</li>
+            <li>Live-Turnier-Scoring</li>
+            <li>Mobile App, PDF-Report</li>
+            <li>Andere Pferderassen</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- PERSONAS -->
+    <section id="personas" class="section-anchor">
+      <h2>User Personas</h2>
+      <div class="card" style="margin-bottom:1rem;">
+        <h4 class="text-primary">🏇 Sigríður – Professionelle Reiterin (F1)</h4>
+        <p><strong>Kernbedürfnis:</strong> Frame-genaue Analyse von Trabeinlagen und Takt-Unregelmäßigkeiten. Möchte LAP-Wert und Tölt-Subklassifikation sehen.</p>
+        <p style="margin-bottom:0;"><strong>Frustration:</strong> „Mein Richter sagt 'zu passhaft', aber ich kann es im Video nicht sehen."</p>
+      </div>
+      <div class="card" style="margin-bottom:1rem;">
+        <h4 class="text-primary">📊 Jón – Trainer für 15 Pferde</h4>
+        <p><strong>Kernbedürfnis:</strong> Videobibliothek mit Filterung, reproduzierbare Scores über Zeit, Exportfunktion für Besitzergespräche.</p>
+        <p style="margin-bottom:0;"><strong>Frustration:</strong> „Ich kann meinem Kunden nicht zeigen, dass das Pferd sich verbessert hat."</p>
+      </div>
+      <div class="card">
+        <h4 class="text-primary">🎓 Thomas – FEIF-Richter Level 2</h4>
+        <p><strong>Kernbedürfnis:</strong> Objektive LAP-Messung für Grenzfälle (trabiger vs. passiger Tölt), Annotationstool für Lehrvideos.</p>
+        <p style="margin-bottom:0;"><strong>Frustration:</strong> „Bei 25 fps kann ich nicht sagen, ob das eine Trabeinlage war oder nicht."</p>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- AKTIVE SPRINTS                                               -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <section id="sprint1" class="section-anchor">
+      <h2>Sprint A – Analyse-Dashboard <span class="status-pill status-done" style="font-size:.75rem;">Abgeschlossen</span></h2>
+      <p style="color:var(--muted);">
+        <strong>Ziel:</strong> Alle Analyse-Ergebnisse nach Video-Verarbeitung sichtbar machen –
+        Tölt-Score, Takt-Timeline, LAP/DF, Rennpass-Score in App.tsx verdrahtet.
+      </p>
+
+      <div class="sprint-card">
+        <div class="sprint-header">
+          <span class="sprint-tag sprint-tag-active">Sprint A</span>
+          <strong>Frontend: Analyse-Komponenten in App.tsx eingebunden</strong>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Story</th><th>Beschreibung</th><th>SP</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>US-A1</td>
+              <td><strong>Analyse-Dashboard:</strong> ToltScoreCard, TaktTimeline, RennpassScoreCard in App.tsx verdrahtet (status === 'done')</td>
+              <td><span class="sp-badge">5</span></td>
+              <td><span class="status-pill status-done">✓ Fertig</span></td>
+            </tr>
+            <tr>
+              <td>US-A2</td>
+              <td><strong>Auth-Header:</strong> Login/Register-Button, AuthModal, User-Avatar-Initialen</td>
+              <td><span class="sp-badge">3</span></td>
+              <td><span class="status-pill status-done">✓ Fertig</span></td>
+            </tr>
+            <tr>
+              <td>US-A3</td>
+              <td><strong>Video-Detail-Screen:</strong> Analyse, Timeline und Frame-Navigation nach Klick auf Video</td>
+              <td><span class="sp-badge">3</span></td>
+              <td><span class="status-pill status-done">✓ Fertig</span></td>
+            </tr>
+          </tbody>
+        </table></div>
+      </div>
+    </section>
+
+    <section id="sprint2" class="section-anchor">
+      <h2>Sprint B – MMPose + Konfidenz + Bulk-Export <span class="status-pill status-done" style="font-size:.75rem;">Abgeschlossen</span></h2>
+      <p style="color:var(--muted);">
+        <strong>Ziel:</strong> Echte ML-Keypoints (MMPose HRNet-W32 Horse-10, 22 KP), korrekte Konfidenz-Scores,
+        Sprunggelenk-Indizes für LAP/DF, Bulk-COCO-Export für Training.
+      </p>
+
+      <div class="sprint-card">
+        <div class="sprint-header">
+          <span class="sprint-tag sprint-tag-active">Sprint B</span>
+          <strong>ML Pose Estimation v0.2 – vollständig</strong>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Story</th><th>Beschreibung</th><th>SP</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>US-B1</td>
+              <td><strong>Echte MMPose-Konfidenz:</strong> <code>keypoint_scores</code> aus MMPose werden pro KP in DB gespeichert; Frontend hebt unsichere KP hervor (&lt;50%)</td>
+              <td><span class="sp-badge">5</span></td>
+              <td><span class="status-pill status-done">✓ Fertig</span></td>
+            </tr>
+            <tr>
+              <td>US-B2</td>
+              <td><strong>Bulk COCO Training Export:</strong> <code>/api/training/export-bulk</code> erzeugt ZIP mit coco.json + Frame-JPEGs aus allen Trainingsvideos</td>
+              <td><span class="sp-badge">5</span></td>
+              <td><span class="status-pill status-done">✓ Fertig</span></td>
+            </tr>
+            <tr>
+              <td>US-B3</td>
+              <td><strong>Sprunggelenke Horse-10:</strong> Korrekte Keypoint-Indizes 13 (Nearhindhock) + 18 (Offhindhock) für Duty-Factor-Berechnung; DF-Quellen auf 6 erweitert</td>
+              <td><span class="sp-badge">3</span></td>
+              <td><span class="status-pill status-done">✓ Fertig</span></td>
+            </tr>
+          </tbody>
+        </table></div>
+      </div>
+    </section>
+
+    <section id="sprint3" class="section-anchor">
+      <h2>Sprint C – Tölt-Kernfeatures + Timeline-Navigation <span class="status-pill status-done" style="font-size:.75rem;">Abgeschlossen</span></h2>
+      <p style="color:var(--muted);">
+        LAP/DF/Subklassifikation im Frontend, Timeline-Seek, FPS-Sync, direkte Frame-Navigation,
+        Disclaimer, Fehlerbalken-Click.
+      </p>
+
+      <div class="sprint-card">
+        <div class="sprint-header">
+          <span class="sprint-tag sprint-tag-active">Sprint C</span>
+          <strong>Tölt-Analyse vollständig</strong>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Story</th><th>Beschreibung</th><th>SP</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>US-C1</td>
+              <td><strong>LAP/DF/Subklassifikation:</strong> Backend berechnet + liefert; ToltScoreCard zeigt passig/korrekt/trabig mit farbiger Badge</td>
+              <td><span class="sp-badge">3</span></td>
+              <td><span class="status-pill status-done">✓ Fertig</span></td>
+            </tr>
+            <tr>
+              <td>US-C2</td>
+              <td><strong>FPS-Sync:</strong> TaktTimeline liest echte fps aus API; VideoPlayer erhält fps-Prop – kein hardcodiertes 25fps mehr</td>
+              <td><span class="sp-badge">2</span></td>
+              <td><span class="status-pill status-done">✓ Fertig</span></td>
+            </tr>
+            <tr>
+              <td>US-C3</td>
+              <td><strong>Timeline-Seek:</strong> Klick auf Timeline seeked Video; Fehlerbalken-Klick navigiert zu erstem Fehler-Frame</td>
+              <td><span class="sp-badge">3</span></td>
+              <td><span class="status-pill status-done">✓ Fertig</span></td>
+            </tr>
+            <tr>
+              <td>US-C4</td>
+              <td><strong>Direkte Frame-Navigation:</strong> "Fr. N" in VideoPlayer anklicken → Eingabefeld → Enter seeked zu exaktem Frame</td>
+              <td><span class="sp-badge">2</span></td>
+              <td><span class="status-pill status-done">✓ Fertig</span></td>
+            </tr>
+            <tr>
+              <td>US-C5</td>
+              <td><strong>Disclaimer:</strong> Medizinischer/wissenschaftlicher Haftungsausschluss dauerhaft sichtbar in ToltScoreCard</td>
+              <td><span class="sp-badge">1</span></td>
+              <td><span class="status-pill status-done">✓ Fertig</span></td>
+            </tr>
+          </tbody>
+        </table></div>
+      </div>
+
+      <div class="sprint-card" style="margin-top:1rem;">
+        <div class="sprint-header">
+          <span class="sprint-tag sprint-tag-active">Sprint D</span>
+          <strong>Fine-tuning Pipeline (v0.3)</strong>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Story</th><th>Beschreibung</th><th>SP</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>US-D1</td>
+              <td><strong>trainer.py:</strong> MMPose-Head Fine-tuning (Backbone eingefroren, ~726 trainierbare Parameter), HorseKeypointDataset, Gaussian Heatmaps, Early Stopping, MLflow-Logging</td>
+              <td><span class="sp-badge">13</span></td>
+              <td><span class="status-pill status-done">✓ Fertig</span></td>
+            </tr>
+            <tr>
+              <td>US-D2</td>
+              <td><strong>Training-Endpunkte:</strong> <code>POST /api/training/start</code>, <code>GET /api/training/status/{id}</code>, <code>POST /api/training/activate/{id}</code> – inkl. DB-Fallback nach Neustart</td>
+              <td><span class="sp-badge">5</span></td>
+              <td><span class="status-pill status-done">✓ Fertig</span></td>
+            </tr>
+            <tr>
+              <td>US-D3</td>
+              <td><strong>TrainingManager-UI:</strong> Fine-tuning starten, Echtzeit-Fortschrittsbalken (Epoche/Loss), Modell-Aktivieren-Button pro Job</td>
+              <td><span class="sp-badge">5</span></td>
+              <td><span class="status-pill status-done">✓ Fertig</span></td>
+            </tr>
+            <tr>
+              <td>US-D4</td>
+              <td><strong>pyyaml + mlflow in requirements.txt:</strong> Fehlende Abhängigkeiten ergänzt (blockierten trainer.py + activate_model)</td>
+              <td><span class="sp-badge">1</span></td>
+              <td><span class="status-pill status-done">✓ Fertig</span></td>
+            </tr>
+          </tbody>
+        </table></div>
+      </div>
+    </section>
+
+    <section id="sprint-g" class="section-anchor">
+      <h2>Sprint G – Analyse-Präzision <span class="status-pill status-done" style="font-size:.75rem;">Abgeschlossen</span></h2>
+      <p style="color:var(--muted);">
+        <strong>Ziel:</strong> Huffolge-Erkennung durch Bodenreferenz verbessern; optionales Stockmaß als
+        Normierungsfaktor für distanzinvariante Geschwindigkeitsschätzung einführen.
+      </p>
+
+      <div class="sprint-card">
+        <div class="sprint-header">
+          <span class="sprint-tag sprint-tag-active">Sprint G</span>
+          <strong>Bodenreferenz + Geschwindigkeitsschätzung</strong>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Story</th><th>Beschreibung</th><th>SP</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>US-G1</td>
+              <td><strong>Bodenebene:</strong> Rollendes Minimum der Fesselgelenk-Y-Werte (bbox-relativ, ~2 s Fenster) als Bodenlinie für Foot-On-Detektion</td>
+              <td><span class="sp-badge">5</span></td>
+              <td><span class="status-pill status-done">✓ Fertig</span></td>
+            </tr>
+            <tr>
+              <td>US-G2</td>
+              <td><strong>Stockmaß-Eingabe:</strong> Optionales Feld in Upload-UI + DB-Spalte <code>videos.stockmass_cm</code></td>
+              <td><span class="sp-badge">2</span></td>
+              <td><span class="status-pill status-done">✓ Fertig</span></td>
+            </tr>
+            <tr>
+              <td>US-G3</td>
+              <td><strong>Geschwindigkeitsschätzung:</strong> <code>speed = (Δx_px / bbox_height_px) × stockmaß_m × fps</code> – distanzinvariant, nur Seitenansicht-Frames</td>
+              <td><span class="sp-badge">5</span></td>
+              <td><span class="status-pill status-done">✓ Fertig</span></td>
+            </tr>
+            <tr>
+              <td>US-G4</td>
+              <td><strong>Score-Card-Anzeige:</strong> Geschwindigkeitsband + Plausibilitätsprüfung in ToltScoreCard / RennpassScoreCard</td>
+              <td><span class="sp-badge">3</span></td>
+              <td><span class="status-pill status-done">✓ Fertig</span></td>
+            </tr>
+          </tbody>
+        </table></div>
+      </div>
+    </section>
+
+    <section id="sprint-h" class="section-anchor">
+      <h2>Sprint H – i18n vollständig <span class="status-pill status-done" style="font-size:.75rem;">Abgeschlossen</span></h2>
+      <p style="color:var(--muted);">
+        <strong>Ziel:</strong> Alle UI-sichtbaren Strings in 19 Komponenten internationalisieren;
+        Language-Switcher DE/EN im Header.
+      </p>
+
+      <div class="sprint-card">
+        <div class="sprint-header">
+          <span class="sprint-tag sprint-tag-active">Sprint H</span>
+          <strong>Vollständige Internationalisierung</strong>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Story</th><th>Beschreibung</th><th>SP</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>US-H1</td>
+              <td><strong>19 Komponenten i18n:</strong> Alle UI-Strings mit <code>useTranslation()</code> und <code>t('key')</code> versehen – kein hartkodierter String mehr</td>
+              <td><span class="sp-badge">5</span></td>
+              <td><span class="status-pill status-done">✓ Fertig</span></td>
+            </tr>
+            <tr>
+              <td>US-H2</td>
+              <td><strong>Übersetzungsdateien:</strong> <code>de.json</code> und <code>en.json</code> vollständig; Fachbegriffe (Tölt, FEIF, LAP, DF) bleiben unverändert</td>
+              <td><span class="sp-badge">3</span></td>
+              <td><span class="status-pill status-done">✓ Fertig</span></td>
+            </tr>
+            <tr>
+              <td>US-H3</td>
+              <td><strong>LanguageSwitcher-Komponente:</strong> DE/EN-Schaltflächen im App-Header; aktive Sprache hervorgehoben</td>
+              <td><span class="sp-badge">2</span></td>
+              <td><span class="status-pill status-done">✓ Fertig</span></td>
+            </tr>
+          </tbody>
+        </table></div>
+      </div>
+    </section>
+
+    <section id="sprint-i" class="section-anchor">
+      <h2>Sprint I – WCAG 2.1 AA Barrierefreiheit <span class="status-pill status-done" style="font-size:.75rem;">Abgeschlossen</span></h2>
+      <p style="color:var(--muted);">
+        <strong>Ziel:</strong> Vollständige WCAG 2.1 AA-Konformität: Kontrast, Tastatur-Navigation,
+        ARIA-Labels, Focus-Styles, Skip-Link.
+      </p>
+
+      <div class="sprint-card">
+        <div class="sprint-header">
+          <span class="sprint-tag sprint-tag-active">Sprint I</span>
+          <strong>Barrierefreiheit (WCAG 2.1 AA)</strong>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Story</th><th>Beschreibung</th><th>SP</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>US-I1</td>
+              <td><strong>Kontrast-Audit:</strong> <code>flaggenrot-text: #FF6B81</code> als WCAG-konformer Fehlertext (4,3:1) – alle Fehlertext-Elemente umgestellt</td>
+              <td><span class="sp-badge">2</span></td>
+              <td><span class="status-pill status-done">✓ Fertig</span></td>
+            </tr>
+            <tr>
+              <td>US-I2</td>
+              <td><strong>Tastatur-Navigation:</strong> <code>:focus-visible</code>-Outline, Skip-Link, Fokus-Trap in Modals, Escape-Key-Handler</td>
+              <td><span class="sp-badge">3</span></td>
+              <td><span class="status-pill status-done">✓ Fertig</span></td>
+            </tr>
+            <tr>
+              <td>US-I3</td>
+              <td><strong>ARIA-Labels &amp; Live-Regions:</strong> <code>role="progressbar"</code>, <code>aria-live="polite"</code>, <code>role="dialog"</code>, <code>role="alert"</code> in allen relevanten Komponenten</td>
+              <td><span class="sp-badge">3</span></td>
+              <td><span class="status-pill status-done">✓ Fertig</span></td>
+            </tr>
+          </tbody>
+        </table></div>
+      </div>
+    </section>
+
+    <section id="sprint-j" class="section-anchor">
+      <h2>Sprint J1 – 1-Klick-Training <span class="status-pill status-done" style="font-size:.75rem;">Abgeschlossen</span></h2>
+      <p style="color:var(--muted);">
+        <strong>Ziel:</strong> Vereinfachter Trainings-Workflow: Ein Button startet Export + Fine-tuning
+        in einem Schritt; mehrstufige Status-Anzeige mit Fortschrittsbalken.
+      </p>
+
+      <div class="sprint-card">
+        <div class="sprint-header">
+          <span class="sprint-tag sprint-tag-active">Sprint J</span>
+          <strong>1-Klick-Training (TrainingManager)</strong>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Story</th><th>Beschreibung</th><th>SP</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>US-J1</td>
+              <td><strong>Kombinierter Workflow:</strong> „Mit freigegebenen Videos trainieren"-Button ersetzt getrennten Export + Training-Start; <code>POST /api/training/start</code> baut COCO-ZIP intern</td>
+              <td><span class="sp-badge">3</span></td>
+              <td><span class="status-pill status-done">✓ Fertig</span></td>
+            </tr>
+            <tr>
+              <td>US-J2</td>
+              <td><strong>Mehrstufige Status-Anzeige:</strong> Button-Text wechselt durch Phasen <code>[1/2]</code> → <code>[2/2] X%</code> → abgeschlossen; Video-Zähler sichtbar</td>
+              <td><span class="sp-badge">2</span></td>
+              <td><span class="status-pill status-done">✓ Fertig</span></td>
+            </tr>
+            <tr>
+              <td>US-J3</td>
+              <td><strong>Erweiterte Optionen:</strong> Bisherige Buttons in <code>&lt;details&gt;</code>-Akkordeon verschoben – kein Breaking Change, alle Funktionen erhalten</td>
+              <td><span class="sp-badge">1</span></td>
+              <td><span class="status-pill status-done">✓ Fertig</span></td>
+            </tr>
+          </tbody>
+        </table></div>
+      </div>
+    </section>
+
+    <!-- ROADMAP -->
+    <section id="roadmap" class="section-anchor">
+      <h2>Release-Roadmap</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Release</th><th>Status</th><th>Schwerpunkt</th><th>Kernfeatures</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>v0.1 – MVP</strong></td>
+            <td><span class="status-pill status-done">Implementiert</span></td>
+            <td>Sichtbarmachen</td>
+            <td>FastAPI, YOLOv8 BBox, proportionale Keypoints, Gangart-Overlay, Island-CI, Cleanup</td>
+          </tr>
+          <tr>
+            <td><strong>v0.2 – Tölt-Analyse</strong></td>
+            <td><span class="status-pill status-done">Implementiert</span></td>
+            <td>Bewerten</td>
+            <td>Analyse-Dashboard, Takt-Timeline, LAP/DF-Scores, Tölt-Subklassifikation, MMPose 22 KP, Auth, Annotationstool, LernStatus, Export, Reset</td>
+          </tr>
+          <tr>
+            <td><strong>v0.3 – Fine-tuning</strong></td>
+            <td><span class="status-pill status-done">Abgeschlossen</span></td>
+            <td>Lernen</td>
+            <td>Fine-tuning Pipeline (trainer.py, CPU-on head-only), TrainingManager-UI, pyyaml/mlflow, DB-Rollback nach Neustart</td>
+          </tr>
+          <tr>
+            <td><strong>Sprint G – Analyse-Präzision</strong></td>
+            <td><span class="status-pill status-done">Abgeschlossen</span></td>
+            <td>Präzision</td>
+            <td>Bodenreferenz für Foot-On-Detektion, Stockmaß-Eingabe, distanzinvariante Geschwindigkeitsschätzung (<code>speed_ms</code>), Score-Card-Anzeige mit Farbcodierung</td>
+          </tr>
+          <tr>
+            <td><strong>v1.0 – Lernfähig</strong></td>
+            <td><span class="status-pill status-done">Abgeschlossen</span></td>
+            <td>Verbessern</td>
+            <td>i18n DE/EN (Sprint H), WCAG 2.1 AA Barrierefreiheit (Sprint I), 1-Klick-Training (Sprint J1)</td>
+          </tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- EPICS -->
+    <section id="epics" class="section-anchor">
+      <h2>Alle Epics &amp; User Stories</h2>
+      <p style="color:var(--muted);font-size:.85rem;">Status basiert auf tatsächlichem Implementierungsstand (Backend-Code + Frontend-Verdrahtung).</p>
+
+      <h3>F1 – Video-Upload &amp; Verwaltung</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Story</th><th>Beschreibung</th><th>SP</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>US-1.1</td><td>Upload per Drag &amp; Drop (MP4/MOV/AVI/MKV)</td><td>3</td><td><span class="status-pill status-done">✓ Backend + Frontend</span></td></tr>
+          <tr><td>US-1.2</td><td>Metadaten: Pferdename, Gangart, Datum, Kamerawinkel (wählbar im Upload-Formular)</td><td>2</td><td><span class="status-pill status-done">✓ Upload-Formular + Video-Detail-Metadaten-Leiste</span></td></tr>
+          <tr><td>US-1.3</td><td>Video-Bibliothek mit Filterung/Sortierung</td><td>5</td><td><span class="status-pill status-done">✓ VideoLibrary-Komponente</span></td></tr>
+          <tr><td>US-1.4</td><td>Datei-Cleanup: Upload+Temp nach Job, Output nach TTL</td><td>3</td><td><span class="status-pill status-done">✓ Cleanup implementiert</span></td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>F2 – KI-Skelettanalyse &amp; Gangart-Erkennung</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Story</th><th>Beschreibung</th><th>SP</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>US-2.0</td><td>Gangart-Erkennung: aktuelle Gangart live im Video einblenden (mit Debounce 10 Frames)</td><td>5</td><td><span class="status-pill status-done">✓ v0.2 aktiv, Debounce gegen Flackern</span></td></tr>
+          <tr><td>US-2.1</td><td>22-KP Skelett-Erkennung via MMPose HRNet-W32, farblich nach Körperzone differenziert</td><td>13</td><td><span class="status-pill status-done">✓ MMPose v0.2 aktiv, Overlay in VideoPlayer + AnnotationTool</span></td></tr>
+          <tr><td>US-2.1b</td><td>Focus-Lock: konsistentes Fokuspferd über alle Frames (Zentrum-Distanz-Tracking); Algorithmus + Annotations-UI referenzieren dasselbe Pferd</td><td>2</td><td><span class="status-pill status-done">✓ video_processor.py locked_cx/cy</span></td></tr>
+          <tr><td>US-2.2</td><td>Tölt-Analyse: LAP/DF, Trabeinlagen, Takt-Score, Subklassifikation</td><td>8</td><td><span class="status-pill status-done">✓ Backend + Frontend (TaktTimeline, ToltScoreCard)</span></td></tr>
+          <tr><td>US-2.3</td><td>Rennpass-Analyse: Lateral-Sync, Pass-Score, Geschwindigkeit</td><td>8</td><td><span class="status-pill status-done">✓ Backend + Frontend (RennpassScoreCard)</span></td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>F3 – Visualisierung</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Story</th><th>Beschreibung</th><th>SP</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>US-3.1</td><td>Video im Browser + Download, Frame-Navigation</td><td>5</td><td><span class="status-pill status-done">✓ VideoPlayer-Komponente</span></td></tr>
+          <tr><td>US-3.1b</td><td>iOS-Sticker-Kontureffekt: yolov8n-seg liefert Pixel-Masken für Pferd+Reiter; zweischichtiger Glow + morphologischer Gradientrand in Gletscherblau</td><td>3</td><td><span class="status-pill status-done">✓ draw_subject_outline() in Video-Output</span></td></tr>
+          <tr><td>US-3.1c</td><td>Kleine Gelenkpunkte im verarbeiteten Video (r=3px, 60% Alpha) – kleiner als Annotations-UI, aber sichtbar</td><td>1</td><td><span class="status-pill status-done">✓ draw_keypoints_small()</span></td></tr>
+          <tr><td>US-3.2</td><td>Takt-Timeline: 4 Spuren (VL/VR/HL/HR), sync mit Video</td><td>8</td><td><span class="status-pill status-done">✓ TaktTimeline-Komponente mit Fehler-Overlay + nicht-auswertbare Frames</span></td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>F4 – Lernfähigkeit</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Story</th><th>Beschreibung</th><th>SP</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>US-4.0</td><td>Lern-Video hochladen: Gangart-Label, Keypoints in DB; LernStatus-Anzeige (Statistik-Kacheln, Gangart-Verteilung)</td><td>3</td><td><span class="status-pill status-done">✓ Backend + Frontend (LernStatus-Komponente)</span></td></tr>
+          <tr><td>US-4.1</td><td>Browser-Annotationstool: Keypoints korrigieren, Zoom/Pan, Skelett-Overlay, COCO-JSON-Export, Unsaved-Changes-Dialog, Konfidenz-Visualisierung (< 0,5 = unsicher)</td><td>13</td><td><span class="status-pill status-done">✓ Vollständig implementiert + verdrahtet</span></td></tr>
+          <tr><td>US-4.2</td><td>Modellversionen verwalten, Rollback</td><td>5</td><td><span class="status-pill status-done">✓ Rollback-UI (AKTIV-Badge, „Rollback auf dieses Modell"-Button) + DB-Fallback nach Neustart</span></td></tr>
+          <tr><td>US-4.3</td><td>PostgreSQL-Schema: videos/frames/keypoints/annotations/training_jobs</td><td>8</td><td><span class="status-pill status-done">✓ DB-Modelle implementiert</span></td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>F5 – Design &amp; CI</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Story</th><th>Beschreibung</th><th>SP</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>US-5.1</td><td>Island-CI vollständig, Dark Mode, Responsive</td><td>8</td><td><span class="status-pill status-done">✓ Vollständig umgesetzt</span></td></tr>
+          <tr><td>US-5.2</td><td>i18n Deutsch + Englisch, WCAG 2.1 AA</td><td>5</td><td><span class="status-pill status-done">✓ Sprint H (i18n) + Sprint I (WCAG 2.1 AA)</span></td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>F6 – Infrastruktur</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Story</th><th>Beschreibung</th><th>SP</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>US-6.1</td><td>FastAPI + PostgreSQL + Docker</td><td>8</td><td><span class="status-pill status-done">✓ Vollständig</span></td></tr>
+          <tr><td>US-6.2</td><td>YOLOv8 v0.1 + MMPose HRNet-W32 v0.2, per config.yaml umschaltbar</td><td>8</td><td><span class="status-pill status-done">✓ MMPose aktiv, Fine-tuning v0.3 via activate_model</span></td></tr>
+          <tr><td>US-6.3</td><td>OpenCV + imageio-ffmpeg, Zwei-Stufen-Encoding</td><td>5</td><td><span class="status-pill status-done">✓ Vollständig</span></td></tr>
+          <tr><td>US-6.4</td><td>React 18 + TypeScript + Vite + Tailwind</td><td>13</td><td><span class="status-pill status-done">✓ Vollständig</span></td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>F7 – User-Management</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Story</th><th>Beschreibung</th><th>SP</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>US-7.1</td><td>E-Mail + Passwort, JWT, Passwort-Reset</td><td>5</td><td><span class="status-pill status-done">✓ Login/Register Modal in App.tsx verdrahtet (Passwort-Reset noch offen)</span></td></tr>
+          <tr><td>US-7.2</td><td>DSGVO: Datenlöschung, kein Training ohne Zustimmung</td><td>3</td><td><span class="status-pill status-wip">~ Backend-Logik vorhanden, Frontend Sprint 3</span></td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- FEATURE STATUS -->
+    <section id="feature-status" class="section-anchor">
+      <h2>Feature-Status Übersicht</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Feature</th><th>Backend</th><th>Frontend</th><th>v0.2 ziel</th></tr></thead>
+        <tbody>
+          <tr><td>Video-Upload &amp; Verarbeitung</td><td>✓</td><td>✓</td><td>✓</td></tr>
+          <tr><td>YOLO BBox-Erkennung</td><td>✓</td><td>✓ (Overlay)</td><td>✓</td></tr>
+          <tr><td>Proportionale Keypoints (v0.1 Fallback)</td><td>✓</td><td>✓ (Overlay)</td><td>✓</td></tr>
+          <tr><td>MMPose HRNet-W32 22 KP (v0.2)</td><td>✓ aktiv</td><td>✓ Overlay VideoPlayer + AnnotationTool</td><td>✓</td></tr>
+          <tr><td>Gangart-Overlay im Video</td><td>✓</td><td>✓</td><td>✓</td></tr>
+          <tr><td>LAP/DF Berechnung (v0.2)</td><td>✓</td><td>✓ ToltScoreCard (Badge + Wert)</td><td>✓ Sprint C</td></tr>
+          <tr><td>Tölt-Score (FEIF)</td><td>✓</td><td>✓ ToltScoreCard verdrahtet</td><td>✓ Sprint A</td></tr>
+          <tr><td>Tölt-Subklassifikation (passig/trabig)</td><td>✓</td><td>✓ farbige Badge in ToltScoreCard</td><td>✓ Sprint C</td></tr>
+          <tr><td>Rennpass-Score</td><td>✓</td><td>✓ RennpassScoreCard verdrahtet</td><td>✓ Sprint A</td></tr>
+          <tr><td>Takt-Timeline (4 Spuren)</td><td>✓</td><td>✓ Timeline-Seek + FPS-Sync + Fehler-Click</td><td>✓ Sprint C</td></tr>
+          <tr><td>Auth (JWT Login/Register)</td><td>✓</td><td>✓ Login/Logout in Header, AuthModal verdrahtet</td><td>✓</td></tr>
+          <tr><td>Video-Bibliothek</td><td>✓ API</td><td>✓</td><td>✓</td></tr>
+          <tr><td>Frame-Navigation + Keypoints</td><td>✓</td><td>✓ direkter Frame-Input in VideoPlayer (Sprint C)</td><td>✓ Sprint C</td></tr>
+          <tr><td>Annotationstool (Keypoint-Korrektur)</td><td>✓ API</td><td>✓ vollständig verdrahtet</td><td>✓</td></tr>
+          <tr><td>COCO-JSON Export (Einzel)</td><td>✓ /api/export-coco/{job_id}</td><td>✓ Export-Link in VideoLibrary</td><td>✓</td></tr>
+          <tr><td>Bulk COCO Export (alle Training-Videos)</td><td>✓ /api/training/export-bulk</td><td>✓ Button im Training-Manager</td><td>✓</td></tr>
+          <tr><td>MMPose echte Konfidenz-Scores</td><td>✓ keypoint_scores gespeichert</td><td>✓ Unsichere KP hervorgehoben (&lt;50%)</td><td>✓</td></tr>
+          <tr><td>Sprunggelenk-Indizes (Horse-10)</td><td>✓ B3: korrekte Indizes 13/18</td><td>–</td><td>✓</td></tr>
+          <tr><td>Stats-Dashboard / LernStatus</td><td>✓ API</td><td>✓ LernStatus-Komponente</td><td>✓</td></tr>
+          <tr><td>Training-Manager (Fine-tuning starten)</td><td>✓ start/status/activate API</td><td>✓ Start-Button, Fortschrittsbalken, Aktivieren-Button</td><td>✓ Sprint D</td></tr>
+          <tr><td>Fine-tuning Pipeline (trainer.py)</td><td>✓ CPU head-only, MLflow, Early Stopping</td><td>–</td><td>✓ Sprint D</td></tr>
+          <tr><td>JSONL-Keypoint-Export</td><td>✓ /api/export/{job_id}</td><td>✓ Download-Link in VideoLibrary</td><td>✓</td></tr>
+          <tr><td>Annotations-Reset</td><td>✓ DELETE /api/annotations/{job_id}</td><td>✓ Reset-Button in VideoLibrary</td><td>✓</td></tr>
+          <tr><td>Learning-Status API</td><td>✓ /api/learning-status</td><td>✓ LernStatus-Komponente</td><td>✓</td></tr>
+          <tr><td>Bodenreferenz Foot-On (Rolling Min, Sprint G)</td><td>✓ gait_detector.py</td><td>–</td><td>✓ Sprint G</td></tr>
+          <tr><td>Stockmaß-Eingabe <code>stockmass_cm</code> (Sprint G)</td><td>✓ DB + API</td><td>✓ Upload-Formular</td><td>✓ Sprint G</td></tr>
+          <tr><td>Geschwindigkeitsschätzung <code>speed_ms</code> (Sprint G)</td><td>✓ gait_detector._compute_speed()</td><td>✓ ToltScoreCard + RennpassScoreCard</td><td>✓ Sprint G</td></tr>
+          <tr><td>DSGVO-vollständig</td><td>Teilweise</td><td>–</td><td>v1.0</td></tr>
+          <tr><td>i18n Deutsch + Englisch (react-i18next)</td><td>–</td><td>✓ LanguageSwitcher, 19 Komponenten</td><td>✓ Sprint H</td></tr>
+          <tr><td>WCAG 2.1 AA Barrierefreiheit</td><td>–</td><td>✓ Kontrast, Focus-Styles, Skip-Link, ARIA, Live-Regions</td><td>✓ Sprint I</td></tr>
+          <tr><td>1-Klick-Training (TrainingManager)</td><td>✓ /api/training/start (COCO-ZIP intern)</td><td>✓ kombinierter Workflow-Button</td><td>✓ Sprint J1</td></tr>
+          <tr><td>Keypoint-Overlay (VideoPlayer)</td><td>–</td><td>✓</td><td>✓</td></tr>
+          <tr><td>Zoom/Pan Annotationstool</td><td>–</td><td>✓</td><td>✓</td></tr>
+          <tr><td>Unsaved-Changes-Dialog</td><td>–</td><td>✓</td><td>✓</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- GAITS -->
+    <section id="gaits" class="section-anchor">
+      <h2>Die 5 Gangarten des Islandpferds</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Gangart</th><th>LAP</th><th>DF</th><th>Schwebephase</th><th>Töltonaut-Prio</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Tölt</strong></td><td>~25%</td><td>30–55%</td><td>Nein</td><td><span class="text-green">★★★ Prio 1</span></td></tr>
+          <tr><td><strong>Rennpass</strong></td><td>~0%</td><td>&lt;30%</td><td>Ja</td><td><span class="text-primary">★★☆ Prio 2</span></td></tr>
+          <tr><td><strong>Schritt</strong></td><td>~25%</td><td>60–70%</td><td>Nein</td><td><span class="text-muted">★☆☆ v0.3</span></td></tr>
+          <tr><td><strong>Trab</strong></td><td>~50%</td><td>30–55%</td><td>Ja</td><td><span class="text-muted">★☆☆ v0.3</span></td></tr>
+          <tr><td><strong>Galopp</strong></td><td>N/A</td><td>20–30%</td><td>Ja</td><td><span class="text-muted">★☆☆ v0.3</span></td></tr>
+        </tbody>
+      </table></div>
+      <p><em>Tölt vs. Schritt:</em> Gleicher LAP (~25%), aber DF &lt; 55% beim Tölt vs. DF ≥ 60% beim Schritt. Das ist der biomechanische Unterschied.</p>
+    </section>
+
+    <!-- FEIF -->
+    <section id="feif" class="section-anchor">
+      <h2>FEIF-Bewertungssystem</h2>
+      <ul>
+        <li><strong>Notenskala:</strong> 0,0–10,0 in 0,5-Schritten</li>
+        <li><strong>Richter:</strong> 5 Richter bei WM, FEIF-lizenziert Level 1–3</li>
+        <li><strong>Disziplinen:</strong> Tölt T1–T5, Fünfgang F1–F3, Track-Rennen V1/V2/P1/P2</li>
+      </ul>
+      <h4>Tölt-Bewertungskriterien</h4>
+      <ol>
+        <li>Takt (→ direkt aus LAP/DF messbar)</li>
+        <li>Tempo-Breite</li>
+        <li>Schwung (→ über Huf-Hub messbar)</li>
+        <li>Hals- und Kopfhaltung</li>
+        <li>Losgelassenheit</li>
+        <li>Tritt (→ Fesselgelenk-Winkel)</li>
+        <li>Raumgriff</li>
+        <li>Gesamteindruck</li>
+      </ol>
+      <div class="callout callout-info">
+        <strong>Töltonaut deckt ab:</strong> Takt (LAP/DF), Schwung (Huf-Hub), Tritt (Fesselgelenk-Winkel).
+        Losgelassenheit und Gesamteindruck bleiben subjektiv – v0.3+.
+      </div>
+    </section>
+
+    <!-- TOLT CRITERIA -->
+    <section id="tolt-criteria" class="section-anchor">
+      <h2>Tölt – FEIF-Subklassifikation</h2>
+      <p><strong>Korrekte Fußungssequenz:</strong> <code>HL → VL → HR → VR → HL → …</code></p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>LAP-Wert</th><th>Diagnose</th><th>Konsequenz</th></tr></thead>
+        <tbody>
+          <tr><td>&lt; 22%</td><td><strong style="color:var(--red)">Passiger Tölt</strong> – zu lateral (Schweinepass)</td><td>Abwertung, Rollbewegung im Sattel</td></tr>
+          <tr><td>22–28%</td><td><strong style="color:var(--green)">Korrekter Tölt</strong> – Idealwert 25%</td><td>Maximum-Score-Bereich</td></tr>
+          <tr><td>&gt; 28%</td><td><strong style="color:var(--red)">Trabiger Tölt</strong> – Diagonal-Tendenz</td><td>Abwertung, visuell kaum erkennbar</td></tr>
+        </tbody>
+      </table></div>
+      <div class="table-wrap" style="margin-top:1rem;"><table>
+        <thead><tr><th>Fehlertyp</th><th>Definition</th><th>Konsequenz</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Trabeinlage</strong></td><td>VL+HR oder VR+HL simultan (LAP → 50%)</td><td>Bewertungsabzug bis Disqualifikation</td></tr>
+          <tr><td><strong>Pass-Einlage</strong></td><td>VL+HL oder VR+HR simultan (LAP → 0%)</td><td>Bewertungsabzug</td></tr>
+          <tr><td><strong>Schwebephase</strong></td><td>Alle 4 Hufe in der Luft (DF &lt; 50% alle 4)</td><td>Kein echter Tölt – schwerer Fehler</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- ML STRATEGY -->
+    <section id="ml-strategy" class="section-anchor">
+      <h2>ML-Strategie</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Version</th><th>Modell</th><th>Keypoints</th><th>LAP/DF</th><th>Training</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="version-badge v01">v0.1 Fallback</span></td>
+            <td>YOLOv8n BBox + proportionale Keypoints</td>
+            <td>31 (berechnet)</td>
+            <td style="color:var(--red)">Nein (Y konstant)</td>
+            <td>Nein</td>
+          </tr>
+          <tr>
+            <td><span class="version-badge v02">v0.2 Aktiv</span></td>
+            <td>MMPose HRNet-W32 Horse-10</td>
+            <td>22</td>
+            <td style="color:var(--green)">Ja (Y variiert)</td>
+            <td>Nein (vortrainiert)</td>
+          </tr>
+          <tr>
+            <td><span class="version-badge v03">v0.3 Geplant</span></td>
+            <td>Fine-tuned hrnet auf Islandpferd-Turnier-Videos + Bi-LSTM/XGBoost</td>
+            <td>31+</td>
+            <td style="color:var(--green)">Ja + Klassifikator</td>
+            <td>Ja (eigene Daten)</td>
+          </tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- DATA -->
+    <section id="data" class="section-anchor">
+      <h2>Trainingsdaten &amp; Lizenzen</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Dataset</th><th>Keypoints</th><th>Lizenz</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Horse-10</strong> (Oxford VGG)</td><td>22</td><td>CC BY 4.0 ✓</td><td><span class="status-pill status-done">Verfügbar</span></td></tr>
+          <tr><td><strong>AP-10K</strong> (NeurIPS 2021)</td><td>17</td><td>CC BY-NC 4.0 ✓</td><td><span class="status-pill status-done">Verfügbar</span></td></tr>
+          <tr><td><strong>PFERD-Dataset 2024</strong></td><td>3D Mocap</td><td>CC BY ✓</td><td><span class="status-pill status-done">GitHub verfügbar</span></td></tr>
+          <tr><td>Animal Kingdom / EquineTrack</td><td>–</td><td>Forschungslizenz</td><td><span class="status-pill status-planned">Ausgeschlossen</span></td></tr>
+          <tr><td><strong>Nutzereigene Videos</strong></td><td>Variabel</td><td>Mit Consent</td><td><span class="text-green">Wertvollste Quelle</span></td></tr>
+        </tbody>
+      </table></div>
+      <div class="callout callout-warn">
+        <strong>Kritische Lücke:</strong> Kein öffentliches Dataset enthält Tölt- oder Rennpass-Videos.
+        Nutzereigene annotierte Videos sind die einzige Quelle für Islandpferd-spezifische Trainingsdaten.
+      </div>
+    </section>
+
+    <!-- LEARNING LOOP -->
+    <section id="learning-loop" class="section-anchor">
+      <h2>Lern-Loop</h2>
+      <div class="arch-diagram" style="font-size:0.8rem; line-height:2;">Nutzer lädt Video hoch + gibt Gangart-Label an
+        ↓
+Verarbeitung + Keypoint-Extraktion (YOLO + MMPose/DLC)
+        ↓
+Keypoints + Metadaten in PostgreSQL (frames + keypoints JSONB)
+        ↓
+Optional: Nutzer bestätigt/korrigiert Keypoints im Browser (AnnotationTool)
+        ↓
+COCO-JSON-Export → MMPose Fine-tuning → neues Modell
+        ↓
+config.yaml: model_path auf neue Gewichte → Backend-Restart</div>
+      <p><strong>DSGVO:</strong> Nur Videos mit <code>training_consent=true</code> fließen ins Training.</p>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  const anchors = document.querySelectorAll('.section-anchor');
+  const links = document.querySelectorAll('.sidebar a');
+  window.addEventListener('scroll', () => {
+    let current = '';
+    anchors.forEach(a => { if (window.scrollY >= a.offsetTop - 80) current = a.id; });
+    links.forEach(l => {
+      l.classList.toggle('active', l.getAttribute('href') === '#' + current);
+    });
+  });
+</script>
+</body>
+</html>

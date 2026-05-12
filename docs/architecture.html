@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Architektur – Töltonaut Docs</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav class="topnav">
+  <span class="brand">Tölt<span>onaut</span> · Docs</span>
+  <nav>
+    <a href="index.html">Übersicht</a>
+    <a href="architecture.html" class="active">Architektur</a>
+    <a href="algorithm.html">Algorithmik</a>
+    <a href="developer.html">Entwickler</a>
+    <a href="product.html">Produkt</a>
+    <a href="user-manual.html">Handbuch</a>
+    <a href="changelog.html">Changelog</a>
+  </nav>
+</nav>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Architektur</div>
+      <a href="#overview">Systemübersicht</a>
+      <a href="#components">Komponenten</a>
+      <a href="#data-flow">Datenfluss</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Backend</div>
+      <a href="#ml-pipeline">ML-Pipeline</a>
+      <a href="#gait-detection">Gangart-Erkennung</a>
+      <a href="#scoring">Scoring-Engine</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Datenbank</div>
+      <a href="#db-schema">DB-Schema</a>
+      <a href="#keypoints">Keypoint-Format</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Infrastruktur</div>
+      <a href="#deployment">Deployment</a>
+      <a href="#config">Konfiguration</a>
+      <a href="#security">Sicherheit</a>
+    </div>
+  </aside>
+
+  <main class="content">
+    <div class="page-header">
+      <span class="page-badge badge-arch">Architektur</span>
+      <h1>Systemarchitektur
+        <span class="subtitle">Technische Struktur und Designentscheidungen von Töltonaut</span>
+      </h1>
+    </div>
+
+    <!-- OVERVIEW -->
+    <section id="overview" class="section-anchor">
+      <h2>Systemübersicht</h2>
+      <p>Töltonaut ist eine Full-Stack-Webanwendung mit drei Hauptschichten: einem reaktiven React-Frontend, einem FastAPI-Backend mit integrierter ML-Pipeline und einer PostgreSQL-Datenbank für persistente Analyse- und Trainingsdaten.</p>
+
+      <div class="arch-diagram">┌─────────────────────────────────────────────────────────────────┐
+│                         <span class="highlight">BROWSER</span>                                  │
+│   React 18 · TypeScript · Tailwind CSS · i18next (DE/EN)        │
+│   Port 5173 (Dev) | Static Build (Prod)                         │
+└────────────────────────┬────────────────────────────────────────┘
+                         │ HTTP / REST
+                         ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                        <span class="highlight">BACKEND</span>                                   │
+│   FastAPI + Uvicorn · Python 3.12 · Port 8000                   │
+│                                                                 │
+│   ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐ │
+│   │  Auth / JWT  │  │  Video API   │  │   Analysis API       │ │
+│   └──────────────┘  └──────┬───────┘  └──────────────────────┘ │
+│                            │                                    │
+│   ┌────────────────────────▼───────────────────────────────┐   │
+│   │                  <span class="green">ML-Pipeline</span>                            │
+│   │  YOLO Detection → Pose Estimation → Gait Detection     │   │
+│   │  → Tölt Scorer / Rennpass Scorer → DB Write            │   │
+│   └────────────────────────────────────────────────────────┘   │
+└────────────────────────┬────────────────────────────────────────┘
+                         │ SQLAlchemy async / psycopg3
+                         ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      <span class="highlight">POSTGRESQL 16</span>                             │
+│   users · videos · frames · keypoints · annotations             │
+│   training_jobs                                                 │
+└─────────────────────────────────────────────────────────────────┘
+
+<span class="muted">Volumes: toeltonaut_data (/data/uploads, /data/outputs)
+         toeltonaut_pg  (PostgreSQL WAL + Data)</span></div>
+    </section>
+
+    <!-- COMPONENTS -->
+    <section id="components" class="section-anchor">
+      <h2>Komponenten</h2>
+
+      <h3>Frontend</h3>
+      <p>Single-Page-Application mit tabbasierter Navigation. Kein Client-Side-Router – Tab-State über React <code>useState</code>. API-Calls über zentralen <code>client.ts</code>-Wrapper mit XHR für Upload-Progress.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Komponente</th><th>Verantwortung</th></tr></thead>
+          <tbody>
+            <tr><td><code>App.tsx</code></td><td>Tab-Navigation, Auth-State, Modal-Steuerung</td></tr>
+            <tr><td><code>UploadZone</code></td><td>Drag-Drop, Metadaten-Form, XHR-Upload mit Fortschrittsbalken</td></tr>
+            <tr><td><code>JobProgress</code></td><td>Polling <code>/api/status</code>, zeigt Analyseergebnisse nach Abschluss</td></tr>
+            <tr><td><code>VideoLibrary</code></td><td>Video-Liste, Filterung, Sortierung, Suche</td></tr>
+            <tr><td><code>VideoPlayer</code></td><td>Frame-by-Frame-Navigation über <code>/api/frame/{id}/{nr}</code></td></tr>
+            <tr><td><code>TaktTimeline</code></td><td>Huf-Landungs-Chart (VL/VR/HL/HR), sync mit Player</td></tr>
+            <tr><td><code>ToltScoreCard</code></td><td>FEIF-Score, Fehlertypen, Takt-Regularität</td></tr>
+            <tr><td><code>RennpassScoreCard</code></td><td>Lateral-Synchronizität, Schwebephase, Stride Count</td></tr>
+            <tr><td><code>AnnotationTool</code></td><td>Manuelles Verschieben von Keypoints, POST zu Annotations-API</td></tr>
+            <tr><td><code>AuthModal</code></td><td>Login/Register-Tabs, JWT-Storage in <code>localStorage</code></td></tr>
+            <tr><td><code>StatsDashboard</code></td><td>Globale Statistiken, Gangart-Verteilung</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Backend-Module</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Modul</th><th>Verantwortung</th></tr></thead>
+          <tbody>
+            <tr><td><code>main.py</code></td><td>FastAPI Entry-Point, alle Routen, Job-State, Startup/Cleanup</td></tr>
+            <tr><td><code>auth.py</code></td><td>JWT-Encoding/Decoding, bcrypt, OAuth2-Dependency</td></tr>
+            <tr><td><code>database.py</code></td><td>Async SQLAlchemy Engine, Session-Factory, <code>init_db()</code></td></tr>
+            <tr><td><code>db_models.py</code></td><td>ORM-Modelle: User, Video, Frame, Keypoint, Annotation, TrainingJob</td></tr>
+            <tr><td><code>models.py</code></td><td>Pydantic Request/Response-Schemas</td></tr>
+            <tr><td><code>config.py</code></td><td>Env-Variablen, Verzeichnis-Setup</td></tr>
+            <tr><td><code>ai_config.py</code></td><td>config.yaml-Parser, Singleton <code>AIConfig</code></td></tr>
+            <tr><td><code>video_processor.py</code></td><td>YOLO + Pose + H.264-Encoding, DB-Write-Batch</td></tr>
+            <tr><td><code>pose_factory.py</code></td><td>Wählt PropPoseEstimator vs. MMPoseEstimator anhand config.yaml</td></tr>
+            <tr><td><code>prop_pose_estimator.py</code></td><td>17 proportionale Keypoints aus BBox (v0.1)</td></tr>
+            <tr><td><code>mmpose_estimator.py</code></td><td>22 Keypoints via hrnet_w32_horse10 (v0.2), Fallback auf v0.1</td></tr>
+            <tr><td><code>gait_detector.py</code></td><td>Regelbasierte Gangart-Erkennung aus Fesselgelenk-Trajektorien</td></tr>
+            <tr><td><code>tolt_scorer.py</code></td><td>Tölt-Fehleranalyse, FEIF-Score 0–10</td></tr>
+            <tr><td><code>rennpass_scorer.py</code></td><td>Lateral-Sync, Schwebephase, Rennpass-Score</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- DATA FLOW -->
+    <section id="data-flow" class="section-anchor">
+      <h2>Datenfluss</h2>
+      <p>Von Video-Upload bis fertiger Analyse:</p>
+
+      <div class="arch-diagram">1. POST /api/upload  ──►  Datei → /data/uploads/{job_id}.ext
+                              Video-Eintrag in DB (status=queued)
+                              Job-ID zurück ans Frontend
+
+2. Background Thread  ──►  VideoProcessor.process()
+   │
+   ├─ YOLO-seg Detection    jedes n-te Frame (vid_stride=2), Klassen 0+17
+   ├─ Focus-Lock            Zentrum-Distanz → konsistentes Fokuspferd
+   ├─ Facing Detection      Pixel-Varianz links vs. rechts
+   ├─ Segmentierungsmaske   Pferd + Reiter kombiniert → Kontureffekt
+   ├─ Pose Estimation       v0.1: proportional | v0.2: MMPose
+   ├─ Gait Detection        Fesselgelenk-Y-Trajektorien → Gangart (Debounce 10 Frames)
+   ├─ DB Write (Batch)      frames + keypoints à 100 Einträge
+   └─ H.264 Encoding        mp4v → libx264 via imageio-ffmpeg
+
+3. GET /api/status/{id}  ──►  Polling Frontend alle 2s
+                               progress 0→100, gait_detected
+
+4. Job done  ──►  Analyse-Endpunkte verfügbar:
+   ├─ /api/takt-timeline/{id}   Huf-Tracks
+   ├─ /api/toelt-score/{id}     Tölt-Score
+   └─ /api/rennpass-score/{id}  Rennpass-Score
+
+5. Auto-Cleanup  ──►  TTL 24h → Output + Upload gelöscht</div>
+    </section>
+
+    <!-- ML PIPELINE -->
+    <section id="ml-pipeline" class="section-anchor">
+      <h2>ML-Pipeline</h2>
+
+      <h3>Modell-Strategie</h3>
+      <p>Die ML-Schicht ist modular aufgebaut und über <code>config.yaml</code> steuerbar. Der <code>PoseFactory</code> instanziiert den passenden Estimator zur Laufzeit.</p>
+
+      <div class="arch-diagram"><span class="highlight">v0.1</span>  YOLOv8n BBox Detection (Class 17: Horse)
+       └► PropPoseEstimator: 17 KP aus BBox-Proportionen
+          ► GaitDetector: regelbasiert
+          ► ToltScorer + RennpassScorer
+
+<span class="green">v0.2</span>  YOLOv8n-seg Segmentation (Klassen 0: Person, 17: Pferd)
+       ├─ Focus-Lock: Zentrum-Tracking, konsistentes Fokuspferd
+       ├─ Masken (Pferd+Reiter) → draw_subject_outline() Glow-Effekt
+       └► MMPosePoseEstimator: hrnet_w32_horse10, 22 KP, mAP ~88%
+          ► draw_keypoints_small(): Skelett + Punkte (r=3) im Video
+          ► GaitDetector: datengestützt + Debounce (MIN_HOLD=10 Frames)
+          ► ToltScorer + RennpassScorer (höhere Genauigkeit)
+
+<span class="muted">v0.3  Fine-tuning auf Islandpferd-Videos
+       + Sprunggelenk ×2, Kniegelenk HB ×2 annotiert</span></div>
+
+      <h3>Keypoint-Prioritäten (Horse-10 Schema, 22 KP)</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Priorität</th><th>Analyse</th><th>Keypoints</th></tr></thead>
+          <tbody>
+            <tr><td><strong>P1</strong></td><td>Takt</td><td>Fesselgelenk ×4 (VL/VR/HL/HR) + Kronrand ×4</td></tr>
+            <tr><td><strong>P2</strong></td><td>Schub</td><td>Hüftgelenk ×2, Sprunggelenk ×2, Kniegelenk HB ×2</td></tr>
+            <tr><td><strong>P3</strong></td><td>Tritt</td><td>Karpalgelenk ×2, Ellbogen ×2, Schulter ×2</td></tr>
+            <tr><td><strong>P4</strong></td><td>Losgelassenheit</td><td>Widerrist, Genick, Nasenbein</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- GAIT DETECTION -->
+    <section id="gait-detection" class="section-anchor">
+      <h2>Gangart-Erkennung</h2>
+      <p>Der <code>GaitDetector</code> analysiert ein 30-Frame-Fenster der normalisierten Fesselgelenk-Y-Positionen und berechnet Korrelationskoeffizienten zwischen Beinpaaren. Seit Sprint G wird Foot-On nicht mehr über rohe Y-Maxima, sondern über ein rollendes Minimum der bbox-relativen Fesselgelenk-Y-Werte (~2 s Fenster) als dynamische Bodenlinie erkannt – kameraschwenkrobust.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Gangart</th><th>Erkennungs-Logik</th><th>Konfidenz</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>Tölt</strong></td>
+              <td>Lateral-Sync &gt; 0.65 AND Diagonal-Sync &lt; 0.40 AND mean_var &lt;= 0.012</td>
+              <td>0.88</td>
+            </tr>
+            <tr>
+              <td><strong>Rennpass</strong></td>
+              <td>Lateral-Sync &gt; 0.65 AND Diagonal-Sync &lt; 0.40 AND mean_var &gt; 0.012</td>
+              <td>0.82</td>
+            </tr>
+            <tr>
+              <td><strong>Trab</strong></td>
+              <td>Diagonal-Sync &gt; 0.60 AND Lateral-Sync &lt; 0.40</td>
+              <td>0.85</td>
+            </tr>
+            <tr>
+              <td><strong>Galopp</strong></td>
+              <td>bbox_var &gt; 0.005 AND mean_var &gt; 0.008</td>
+              <td>0.55</td>
+            </tr>
+            <tr>
+              <td><strong>Schritt</strong></td>
+              <td>mean_var &lt; 0.0005 (wenig Bewegung)</td>
+              <td>0.55–0.60</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout callout-info">
+        <strong>v0.2+:</strong> Geplante Ablösung durch einen LSTM- oder 1D-CNN-Klassifikator, trainiert auf Keypoint-Zeitreihen mit Gangart-Labels aus nutzereigenen Videos.
+      </div>
+
+      <h3>Geschwindigkeitsschätzung (Sprint G)</h3>
+      <p>Der <code>GaitDetector</code> berechnet ab Sprint G <code>speed_ms</code> (m/s) über <code>_compute_speed()</code>: Median von <code>|Δx| / bbox_h × stockmaß_m × effective_fps</code>. Die Formel ist distanzinvariant – Kameraabstand kürzt sich raus, da Bbox-Höhe und Δx gleichzeitig mit 1/Distanz skalieren. Das Ergebnis wird in <code>GaitResult</code>, <code>JobState</code>, <code>JobStatus</code> und <code>VideoListItem</code> propagiert und in <code>ToltScoreCard</code> / <code>RennpassScoreCard</code> mit Farbcodierung und Plausibilitätshinweisen angezeigt. Voraussetzung: <code>videos.stockmass_cm</code> wurde beim Upload angegeben.</p>
+    </section>
+
+    <!-- SCORING -->
+    <section id="scoring" class="section-anchor">
+      <h2>Scoring-Engine</h2>
+
+      <h3>Tölt-Scoring (<code>tolt_scorer.py</code>)</h3>
+      <p>Basierend auf FEIF-Bewertungskriterien. Ausgangspunkt 7.0, Abzüge für erkannte Fehler:</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Fehlertyp</th><th>Definition</th><th>Schwere</th><th>Abzug</th></tr></thead>
+          <tbody>
+            <tr><td>Trabeinlage</td><td>VL+HR oder VR+HL simultan (≤3 Frames)</td><td>Schwer</td><td>−1.5</td></tr>
+            <tr><td>Pass-Einlage</td><td>VL+HL oder VR+HR simultan (≤3 Frames)</td><td>Mittel</td><td>−0.8</td></tr>
+            <tr><td>Takt-Unregelmäßigkeit</td><td>Beat-Interval &gt; 20 % vom Median</td><td>Leicht</td><td>−0.3</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Zusatz-Punkte bis +2.0 für hohe Takt-Regularität. Endnote 0–10, FEIF-Grad auf 0.5 gerundet.</p>
+
+      <h3>Rennpass-Scoring (<code>rennpass_scorer.py</code>)</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Metrik</th><th>Berechnung</th><th>Gewicht</th></tr></thead>
+          <tbody>
+            <tr><td>Lateral-Synchronizität</td><td>Partner-Landungen innerhalb 4 Frames / Gesamtlandungen</td><td>+2.5×</td></tr>
+            <tr><td>Schwebephase</td><td>Alle 4 Hufe y &lt; 0.70 gleichzeitig</td><td>+0.5</td></tr>
+            <tr><td>Lateraler Versatz &gt;40ms</td><td>Versatz-Frames / Stride-Frames</td><td>−1.5</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- DB SCHEMA -->
+    <section id="db-schema" class="section-anchor">
+      <h2>Datenbankschema</h2>
+      <p>PostgreSQL 16 mit SQLAlchemy Async ORM und psycopg3.</p>
+
+      <div class="arch-diagram">┌──────────────────┐       ┌──────────────────────────────────────┐
+│     <span class="highlight">users</span>          │       │               <span class="highlight">videos</span>                │
+├──────────────────┤       ├──────────────────────────────────────┤
+│ id               │◄──┐   │ job_id (PK)                          │
+│ email (UNIQUE)   │   └───│ user_id (FK, nullable)               │
+│ hashed_password  │       │ filename                             │
+│ created_at       │       │ horse_name                           │
+│ is_active        │       │ gait_label                           │
+└──────────────────┘       │ camera_angle                         │
+                           │ status (queued/processing/done/error) │
+                           │ gait_detected                        │
+                           │ progress (0–100)                     │
+                           │ output_path                          │
+                           │ is_training_contribution             │
+                           │ training_consent                     │
+                           │ stockmass_cm (optional, Sprint G)    │
+                           │ created_at (INDEX)                   │
+                           └──────────┬───────────────────────────┘
+                                      │ 1:N
+                           ┌──────────▼───────────────────────────┐
+                           │             <span class="green">frames</span>                 │
+                           ├──────────────────────────────────────┤
+                           │ id (PK)                              │
+                           │ video_id (FK → videos.job_id CASCADE) │
+                           │ frame_nr                             │
+                           │ timestamp_ms                         │
+                           │ UNIQUE (video_id, frame_nr)          │
+                           └────┬──────────────┬──────────────────┘
+                                │ 1:N           │ 1:N
+                    ┌───────────▼──┐   ┌────────▼────────────────┐
+                    │  <span class="green">keypoints</span>   │   │    <span class="green">annotations</span>          │
+                    ├──────────────┤   ├─────────────────────────┤
+                    │ id           │   │ id                       │
+                    │ frame_id     │   │ frame_id                 │
+                    │ data (JSONB) │   │ keypoints (JSONB)        │
+                    └──────────────┘   │ quality_flag (SMALLINT)  │
+                                       │ annotator                │
+                                       └─────────────────────────┘
+
+┌────────────────────────────────────┐
+│          <span class="highlight">training_jobs</span>              │
+├────────────────────────────────────┤
+│ id · model_version · mlflow_run_id │
+│ dataset_snapshot (JSONB)           │
+│ metrics (JSONB) · created_at       │
+└────────────────────────────────────┘</div>
+    </section>
+
+    <!-- KEYPOINT FORMAT -->
+    <section id="keypoints" class="section-anchor">
+      <h2>Keypoint-Format (JSONB)</h2>
+      <p>Keypoints werden als JSON-Array im JSONB-Feld der <code>keypoints</code>-Tabelle gespeichert:</p>
+      <pre><code>[
+  { "name": "nose",          "x": 0.45, "y": 0.12, "confidence": 0.95 },
+  { "name": "poll",          "x": 0.42, "y": 0.06, "confidence": 0.91 },
+  { "name": "withers",       "x": 0.35, "y": 0.27, "confidence": 0.88 },
+  { "name": "l_front_hoof",  "x": 0.24, "y": 0.92, "confidence": 0.83 },
+  { "name": "r_front_hoof",  "x": 0.36, "y": 0.94, "confidence": 0.81 },
+  { "name": "l_hind_hoof",   "x": 0.61, "y": 0.94, "confidence": 0.79 },
+  { "name": "r_hind_hoof",   "x": 0.72, "y": 0.92, "confidence": 0.77 }
+  // ... alle 17 (v0.1) oder 22 (v0.2) Keypoints
+]</code></pre>
+      <p><code>x</code> und <code>y</code> sind auf <code>[0, 1]</code> normiert (relativ zur Frame-Größe). Für den COCO-Export werden sie mit <code>frame_width</code> / <code>frame_height</code> multipliziert.</p>
+    </section>
+
+    <!-- DEPLOYMENT -->
+    <section id="deployment" class="section-anchor">
+      <h2>Deployment</h2>
+      <h3>Docker Compose (Lokal / Dev)</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Service</th><th>Image</th><th>Port</th><th>Volume</th></tr></thead>
+          <tbody>
+            <tr><td><code>db</code></td><td>postgres:16-alpine</td><td>5432</td><td>toeltonaut_pg</td></tr>
+            <tr><td><code>backend</code></td><td>./backend (Build)</td><td>8000</td><td>toeltonaut_data:/data</td></tr>
+            <tr><td><code>frontend</code></td><td>node:20-alpine (Dev)</td><td>5173</td><td>./frontend:/app</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout callout-warn">
+        <strong>Produktion:</strong> Das Frontend-Service im docker-compose ist ein Dev-Server (<code>npm run dev</code>). Für Produktion: <code>npm run build</code> und statische Dateien per Nginx oder direkt vom FastAPI-<code>StaticFiles</code>-Mount ausliefern.
+      </div>
+
+      <h3>Datei-Cleanup</h3>
+      <p>Auto-Delete nach TTL (Standard 24h, konfigurierbar in <code>config.yaml → output.ttl_hours</code>):</p>
+      <ul>
+        <li>Original-Upload: <code>/data/uploads/{job_id}.*</code></li>
+        <li>Zwischendateien: <code>*.tmp.mp4</code></li>
+        <li>Output-Video: nach TTL</li>
+      </ul>
+    </section>
+
+    <!-- CONFIG -->
+    <section id="config" class="section-anchor">
+      <h2>Konfiguration</h2>
+      <h3>config.yaml</h3>
+      <pre><code>ai:
+  model_version: "v0.1"        # v0.1 | v0.2-mmpose
+  model_path: "yolov8n-seg.pt"   # Segmentierungsmodell (liefert Pixel-Masken)
+  pose_model: null              # hrnet_w32_horse10 für v0.2
+  pose_config: null
+  device: "cpu"                 # cpu | cuda | mps
+  yolo_conf: 0.3
+  yolo_imgsz: 640
+  vid_stride: 2                 # Frames überspringen (Geschwindigkeit)
+  max_output_width: 1920
+
+upload:
+  ttl_hours: 0          # 0 = sofort löschen; >0 = Stunden behalten (Re-Analyse)
+
+output:
+  ttl_hours: 24</code></pre>
+
+      <h3>Umgebungsvariablen</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Variable</th><th>Default</th><th>Beschreibung</th></tr></thead>
+          <tbody>
+            <tr><td><code>DATABASE_URL</code></td><td>—</td><td>psycopg3-DSN, z.B. <code>postgresql+psycopg://user:pw@host/db</code></td></tr>
+            <tr><td><code>UPLOADS_DIR</code></td><td><code>/data/uploads</code></td><td>Pfad für hochgeladene Videos</td></tr>
+            <tr><td><code>OUTPUTS_DIR</code></td><td><code>/data/outputs</code></td><td>Pfad für verarbeitete Videos</td></tr>
+            <tr><td><code>SECRET_KEY</code></td><td>—</td><td>JWT-Signing-Secret (in Produktion ändern!)</td></tr>
+            <tr><td><code>CORS_ORIGINS</code></td><td><code>http://localhost:5173,http://localhost:3000</code></td><td>Erlaubte CORS-Origins (kommagetrennt)</td></tr>
+            <tr><td><code>OUTPUT_TTL_HOURS</code></td><td><code>24</code></td><td>Stunden bis zur automatischen Löschung der Ausgabe-Videos</td></tr>
+            <tr><td><code>UPLOAD_TTL_HOURS</code></td><td><code>0</code></td><td>Stunden, wie lange Original-Uploads nach Verarbeitung behalten werden (0 = sofort löschen)</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SECURITY -->
+    <section id="security" class="section-anchor">
+      <h2>Sicherheit</h2>
+      <ul>
+        <li><strong>Auth:</strong> JWT HS256, 24h Gültigkeit, Bcrypt-Passwort-Hashing</li>
+        <li><strong>Dateiuploads:</strong> Nur bekannte Video-Endungen (<code>.mp4 .mov .avi .mkv .webm</code>), max. 4 GB</li>
+        <li><strong>DSGVO:</strong> Account-Löschung löscht alle Videos, Frames, Keypoints und Annotationen per CASCADE; kein Training ohne explizite Zustimmung</li>
+        <li><strong>CORS:</strong> Konfigurierbar via <code>CORS_ORIGINS</code> Umgebungsvariable (Standard: <code>http://localhost:5173,http://localhost:3000</code>) – in Produktion auf die eigene Domain setzen</li>
+        <li><strong>Secrets:</strong> <code>SECRET_KEY</code> muss in Produktion über Umgebungsvariable gesetzt werden, nicht über docker-compose-Default</li>
+      </ul>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  // Highlight aktiven Sidebar-Link beim Scrollen
+  const anchors = document.querySelectorAll('.section-anchor');
+  const links = document.querySelectorAll('.sidebar a');
+  window.addEventListener('scroll', () => {
+    let current = '';
+    anchors.forEach(a => { if (window.scrollY >= a.offsetTop - 80) current = a.id; });
+    links.forEach(l => {
+      l.classList.toggle('active', l.getAttribute('href') === '#' + current);
+    });
+  });
+</script>
+</body>
+</html>

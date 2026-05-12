@@ -1,0 +1,24 @@
+ai:
+  # v0.1 = YOLOv8 BBox + proportionale Keypoints (kein Modell-Download)
+  # v0.2-mmpose = MMPose hrnet_w32_horse10 (22 KP, mAP ~88) – LAP/DF berechenbar
+  model_version: "v0.2-mmpose"
+
+  model_path: "yolov8n.pt"  # YOLO detection model (seg nicht mehr benötigt, da keine Masken)
+
+  pose_model: "/app/models/hrnet_w32_horse10_256x256_split1.pth"
+  pose_config: "/app/models/horse10_hrnet_w32_1x.py"
+
+  device: "cpu"                  # cpu only (GTX 1070 sm_61 inkompatibel mit PyTorch 2.1+)
+  yolo_conf: 0.3
+  yolo_imgsz: 640
+  vid_stride: 2
+  max_output_width: 1920
+
+upload:
+  ttl_hours: 0    # 0 = sofort löschen nach Verarbeitung; >0 = Stunden behalten (Re-Analyse)
+
+output:
+  ttl_hours: 24
+
+database:
+  pool_size: 5

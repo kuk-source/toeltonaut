@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Töltonaut – Dokumentation</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav class="topnav">
+  <span class="brand">Tölt<span>onaut</span> · Docs</span>
+  <nav>
+    <a href="index.html" class="active">Übersicht</a>
+    <a href="architecture.html">Architektur</a>
+    <a href="algorithm.html">Algorithmik</a>
+    <a href="developer.html">Entwickler</a>
+    <a href="product.html">Produkt</a>
+    <a href="user-manual.html">Handbuch</a>
+    <a href="changelog.html">Changelog</a>
+  </nav>
+</nav>
+
+<div class="layout-full">
+
+  <div class="hero">
+    <div class="logo">🐴</div>
+    <h1>Töltonaut</h1>
+    <p>KI-gestützte Bewegungsanalyse für den professionellen Islandpferdesport. Tölt-Qualität objektiv messbar machen.</p>
+    <div class="pills">
+      <span class="pill"><strong>FastAPI</strong> + PostgreSQL</span>
+      <span class="pill"><strong>YOLOv8</strong> + MMPose</span>
+      <span class="pill"><strong>React 18</strong> + TypeScript</span>
+      <span class="pill"><strong>5</strong> Gangarten</span>
+      <span class="pill"><strong>22</strong> Keypoints (v0.2)</span>
+      <span class="pill">Dark Mode · i18n DE/EN</span>
+    </div>
+  </div>
+
+  <h2 style="margin-top:0; border:none; padding:0; margin-bottom:1rem;">Dokumentation</h2>
+  <p class="text-muted">Wähle eine Dokumentation aus dem passenden Bereich.</p>
+
+  <div class="docs-grid">
+    <a href="architecture.html" class="card-link">
+      <span class="card-icon">🏗️</span>
+      <h3>Architektur</h3>
+      <p>Systemübersicht, Komponenten, Datenbankschema, ML-Pipeline und Deployment-Architektur.</p>
+    </a>
+    <a href="developer.html" class="card-link">
+      <span class="card-icon">⚙️</span>
+      <h3>Entwickler</h3>
+      <p>Lokales Setup, API-Referenz, Backend-Module, Frontend-Komponenten und Konfiguration.</p>
+    </a>
+    <a href="product.html" class="card-link">
+      <span class="card-icon">📋</span>
+      <h3>Produkt</h3>
+      <p>Vision, Personas, Feature-Roadmap, User Stories und FEIF-Domänenwissen.</p>
+    </a>
+    <a href="user-manual.html" class="card-link">
+      <span class="card-icon">📖</span>
+      <h3>Benutzerhandbuch</h3>
+      <p>Videos hochladen, Analyseergebnisse verstehen, Annotationstool und Account-Verwaltung.</p>
+    </a>
+    <a href="changelog.html" class="card-link">
+      <span class="card-icon">📝</span>
+      <h3>Changelog</h3>
+      <p>Versionshistorie, neue Features, Breaking Changes und geplante Releases.</p>
+    </a>
+  </div>
+
+  <hr>
+
+  <h2 style="border:none; margin-top:2rem;">Schnellstart</h2>
+
+  <div class="card-grid">
+    <div class="card">
+      <h4>App starten</h4>
+      <pre style="margin:0.5rem 0 0;"><code>docker compose up</code></pre>
+      <p style="font-size:0.82rem; color:var(--muted); margin-top:0.5rem; margin-bottom:0;">
+        Frontend: <a href="http://localhost:5173">localhost:5173</a><br>
+        API: <a href="http://localhost:8000">localhost:8000</a>
+      </p>
+    </div>
+    <div class="card">
+      <h4>API-Docs (Swagger)</h4>
+      <pre style="margin:0.5rem 0 0;"><code>localhost:8000/docs</code></pre>
+      <p style="font-size:0.82rem; color:var(--muted); margin-top:0.5rem; margin-bottom:0;">
+        Vollständige interaktive OpenAPI-Dokumentation
+      </p>
+    </div>
+    <div class="card">
+      <h4>KI-Modell wechseln</h4>
+      <pre style="margin:0.5rem 0 0;"><code>backend/config.yaml</code></pre>
+      <p style="font-size:0.82rem; color:var(--muted); margin-top:0.5rem; margin-bottom:0;">
+        <code>model_version: "v0.1"</code> oder <code>"v0.2-mmpose"</code>
+      </p>
+    </div>
+  </div>
+
+  <hr>
+
+  <h2 style="border:none; margin-top:2rem;">Release-Status</h2>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Version</th>
+          <th>Status</th>
+          <th>Schwerpunkt</th>
+          <th>Highlights</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="mono">v0.1</span></td>
+          <td><span class="status-pill status-done">✓ Implementiert</span></td>
+          <td>MVP</td>
+          <td>FastAPI + YOLO BBox + proportionale Keypoints + Island-CI + Cleanup</td>
+        </tr>
+        <tr>
+          <td><span class="mono">v0.2</span></td>
+          <td><span class="status-pill status-done">✓ Implementiert</span></td>
+          <td>Tölt-Analyse</td>
+          <td>MMPose 22 KP, Takt-Timeline, Tölt-Scoring, LAP/DF, Auth, Annotationstool, COCO-Export</td>
+        </tr>
+        <tr>
+          <td><span class="mono">v0.3</span></td>
+          <td><span class="status-pill status-wip">In Arbeit</span></td>
+          <td>Fine-tuning</td>
+          <td>Fine-tuning Pipeline, Rollback-UI, Neuanalyse-Button</td>
+        </tr>
+        <tr>
+          <td><span class="mono">v1.0</span></td>
+          <td><span class="status-pill status-planned">Geplant</span></td>
+          <td>Lernfähig</td>
+          <td>Annotations-Loop, Modell-Verbesserung aus Nutzerdaten, DSGVO-vollständig</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <hr>
+
+  <p class="text-muted" style="font-size:0.82rem; text-align:center; margin-top:2rem;">
+    Töltonaut · Hobby-Projekt · Nicht-kommerziell ·
+    <a href="https://github.com">GitHub</a>
+  </p>
+
+</div>
+</body>
+</html>

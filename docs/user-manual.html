@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Benutzerhandbuch – Töltonaut</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav class="topnav">
+  <span class="brand">Tölt<span>onaut</span> · Docs</span>
+  <nav>
+    <a href="index.html">Übersicht</a>
+    <a href="architecture.html">Architektur</a>
+    <a href="algorithm.html">Algorithmik</a>
+    <a href="developer.html">Entwickler</a>
+    <a href="product.html">Produkt</a>
+    <a href="user-manual.html" class="active">Handbuch</a>
+    <a href="changelog.html">Changelog</a>
+  </nav>
+</nav>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Erste Schritte</div>
+      <a href="#getting-started">Erste Schritte</a>
+      <a href="#account">Account erstellen</a>
+      <a href="#recording-tips">Video-Aufnahme</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Analyse</div>
+      <a href="#upload">Video hochladen</a>
+      <a href="#progress">Analyse verstehen</a>
+      <a href="#gait">Erkannte Gangart</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Ergebnisse</div>
+      <a href="#takt-timeline">Takt-Timeline</a>
+      <a href="#tolt-score">Tölt-Score</a>
+      <a href="#rennpass-score">Rennpass-Score</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Werkzeuge</div>
+      <a href="#video-player">Video-Player</a>
+      <a href="#library">Video-Bibliothek</a>
+      <a href="#annotation">Annotationstool</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Mitmachen</div>
+      <a href="#contribute">Trainingsdaten beitragen</a>
+      <a href="#account-mgmt">Account verwalten</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Hilfe</div>
+      <a href="#faq">Häufige Fragen</a>
+      <a href="#limitations">Grenzen der Analyse</a>
+    </div>
+  </aside>
+
+  <main class="content">
+    <div class="page-header">
+      <span class="page-badge badge-user">Benutzerhandbuch</span>
+      <h1>Benutzerhandbuch
+        <span class="subtitle">Schritt für Schritt – vom Video zur Tölt-Analyse</span>
+      </h1>
+    </div>
+
+    <!-- GETTING STARTED -->
+    <section id="getting-started" class="section-anchor">
+      <h2>Erste Schritte</h2>
+      <p>Töltonaut analysiert Videos von Islandpferden und zeigt dir objektiv, wie dein Pferd sich bewegt. Die App erkennt automatisch die Gangart, zeichnet das Skelett ein und bewertet Takt, Fußungssequenz und mögliche Fehler.</p>
+
+      <div class="card-grid">
+        <div class="card">
+          <h4>1. Video aufnehmen</h4>
+          <p style="font-size:0.85rem; color:var(--muted); margin:0;">Seitenansicht, 10–25 m Abstand, 30–60 fps</p>
+        </div>
+        <div class="card">
+          <h4>2. Video hochladen</h4>
+          <p style="font-size:0.85rem; color:var(--muted); margin:0;">Drag &amp; Drop oder Datei auswählen, Metadaten eingeben</p>
+        </div>
+        <div class="card">
+          <h4>3. Ergebnisse lesen</h4>
+          <p style="font-size:0.85rem; color:var(--muted); margin:0;">Takt-Timeline, Score-Card, Frame-by-Frame</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ACCOUNT -->
+    <section id="account" class="section-anchor">
+      <h2>Account erstellen</h2>
+      <p>Ein Account ist optional, aber empfohlen: Nur mit Account bleiben deine Videos gespeichert und du kannst die Videobibliothek nutzen.</p>
+      <ol>
+        <li>Klicke oben rechts auf <strong>Anmelden</strong></li>
+        <li>Wähle den Tab <strong>Registrieren</strong></li>
+        <li>Gib deine E-Mail-Adresse und ein Passwort (mind. 8 Zeichen) ein</li>
+        <li>Klicke auf <strong>Konto erstellen</strong></li>
+      </ol>
+      <div class="callout callout-info">
+        Ohne Account werden deine Videos anonym gespeichert und nach 24 Stunden automatisch gelöscht.
+      </div>
+    </section>
+
+    <!-- RECORDING TIPS -->
+    <section id="recording-tips" class="section-anchor">
+      <h2>Video-Aufnahme: So bekommst du die besten Ergebnisse</h2>
+
+      <div class="table-wrap"><table>
+        <thead><tr><th>Parameter</th><th>Empfehlung</th></tr></thead>
+        <tbody>
+          <tr><td>Kameraposition</td><td>Seitlich, 90° zur Bewegungsrichtung</td></tr>
+          <tr><td>Abstand</td><td>10–25 Meter vom Pferd</td></tr>
+          <tr><td>Kamerahöhe</td><td>0,8–1,5 Meter</td></tr>
+          <tr><td>Bildrate</td><td>30 fps für Tölt/Schritt/Galopp; 60 fps für Rennpass</td></tr>
+          <tr><td>Belichtung</td><td>Gutes Licht, Pferd nicht gegenlichtend aufnehmen</td></tr>
+          <tr><td>Hintergrund</td><td>Möglichst einfarbig und kontrastreich zum Pferd</td></tr>
+          <tr><td>Format</td><td>MP4, MOV, AVI oder MKV</td></tr>
+          <tr><td>Max. Dateigröße</td><td>4 GB</td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="callout callout-warn">
+        <strong>Häufige Fehler:</strong>
+        <ul style="margin: 0.5rem 0 0 1rem;">
+          <li>Schräge Aufnahmewinkel verfälschen die Keypoint-Erkennung</li>
+          <li>Zu großer Abstand → Pferd zu klein → schlechtere Erkennung</li>
+          <li>Gegenlicht führt zu verschwommenem Skelett</li>
+          <li>Zu niedrige Bildrate beim Rennpass → Motion Blur</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- UPLOAD -->
+    <section id="upload" class="section-anchor">
+      <h2>Video hochladen</h2>
+      <ol>
+        <li>Auf der <strong>Analyse</strong>-Seite findest du die Upload-Zone</li>
+        <li>Ziehe dein Video per Drag &amp; Drop in die Zone, oder klicke darauf und wähle die Datei</li>
+        <li>Fülle optional die Metadaten aus:
+          <ul>
+            <li><strong>Pferdename:</strong> z.B. „Freyja von der Heidehof"</li>
+            <li><strong>Gangart:</strong> Tölt, Trab, Schritt, Galopp oder Rennpass</li>
+            <li><strong>Aufnahmedatum</strong></li>
+            <li><strong>Kamerawinkel:</strong> seitlich links, seitlich rechts, schräg vorn, schräg hinten</li>
+          </ul>
+        </li>
+        <li>Klicke <strong>Analyse starten</strong></li>
+      </ol>
+      <div class="callout callout-info">
+        <strong>Tipp:</strong> Die Gangart-Angabe hilft der KI, sich auf die richtigen Metriken zu konzentrieren. Die KI erkennt die Gangart zwar automatisch, aber deine Angabe verbessert die Erkennung.
+      </div>
+    </section>
+
+    <!-- PROGRESS -->
+    <section id="progress" class="section-anchor">
+      <h2>Analyse-Fortschritt</h2>
+      <p>Nach dem Upload siehst du einen Fortschrittsbalken mit den aktuellen Schritten:</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Phase</th><th>Was passiert</th><th>Dauer (Beispiel)</th></tr></thead>
+        <tbody>
+          <tr><td>0–90%</td><td>YOLO erkennt Pferd, Skelett wird Frame für Frame analysiert</td><td>~1 Min./Minute Video</td></tr>
+          <tr><td>90–95%</td><td>H.264-Encoding für Browser-Wiedergabe</td><td>~30 Sek.</td></tr>
+          <tr><td>95–100%</td><td>Scoring und Datenbankschreiben</td><td>Wenige Sekunden</td></tr>
+        </tbody>
+      </table></div>
+      <p>Nach Abschluss erscheinen automatisch alle Analyse-Karten unterhalb des Videos.</p>
+    </section>
+
+    <!-- GAIT -->
+    <section id="gait" class="section-anchor">
+      <h2>Erkannte Gangart</h2>
+      <p>Die KI erkennt die aktuelle Gangart automatisch und blendet sie im verarbeiteten Video ein. Im Analyse-Ergebnis siehst du:</p>
+      <ul>
+        <li><strong>Erkannte Gangart</strong> mit Konfidenz-Prozent</li>
+        <li><strong>Gangart-Timeline</strong> (wenn das Video Gangartenwechsel enthält)</li>
+      </ul>
+      <p>Die Erkennung basiert auf der Synchronisation der Fesselgelenke (v0.1 regelbasiert, v0.2+ ML-basiert).</p>
+    </section>
+
+    <!-- TAKT TIMELINE -->
+    <section id="takt-timeline" class="section-anchor">
+      <h2>Takt-Timeline</h2>
+      <p>Die Takt-Timeline zeigt für jedes der 4 Beine (VL = vorne links, VR = vorne rechts, HL = hinten links, HR = hinten rechts), wann es den Boden berührt.</p>
+
+      <div class="card">
+        <div style="display:flex; gap:1rem; align-items:center; flex-wrap:wrap;">
+          <div style="display:flex; align-items:center; gap:0.5rem;">
+            <div style="width:24px; height:4px; background:#60A5FA; border-radius:2px;"></div>
+            <span style="font-size:0.85rem;">VL – Vorne links</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:0.5rem;">
+            <div style="width:24px; height:4px; background:#34D399; border-radius:2px;"></div>
+            <span style="font-size:0.85rem;">VR – Vorne rechts</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:0.5rem;">
+            <div style="width:24px; height:4px; background:#F87171; border-radius:2px;"></div>
+            <span style="font-size:0.85rem;">HL – Hinten links</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:0.5rem;">
+            <div style="width:24px; height:4px; background:#FBBF24; border-radius:2px;"></div>
+            <span style="font-size:0.85rem;">HR – Hinten rechts</span>
+          </div>
+        </div>
+      </div>
+
+      <h4>Was du lesen kannst:</h4>
+      <ul>
+        <li><strong>Regelmäßige Abstände</strong> zwischen den Kurven → guter Takt</li>
+        <li><strong>Zwei Linien übereinander</strong> (z.B. VL und HR gleichzeitig unten) → Trabeinlage (schwerer Fehler im Tölt)</li>
+        <li><strong>Lücken in der Timeline</strong> → Schwebephase (normal bei Trab/Galopp, Fehler bei Tölt)</li>
+        <li><strong>Seitenweise Synchronisation</strong> → Kennzeichen für Pass-Einlage oder Rennpass</li>
+      </ul>
+    </section>
+
+    <!-- TOLT SCORE -->
+    <section id="tolt-score" class="section-anchor">
+      <h2>Tölt-Score</h2>
+      <p>Der Tölt-Score bewertet die Qualität des Tölt auf einer Skala von 0–10 nach FEIF-Richtlinien (auf 0,5 gerundet).</p>
+
+      <div class="table-wrap"><table>
+        <thead><tr><th>Score-Bereich</th><th>Bedeutung</th></tr></thead>
+        <tbody>
+          <tr><td><span class="text-green">8,0–10,0</span></td><td>Ausgezeichneter Tölt – sehr regelmäßig, keine Fehler</td></tr>
+          <tr><td><span class="text-primary">6,0–7,5</span></td><td>Guter bis sehr guter Tölt – wenige Unregelmäßigkeiten</td></tr>
+          <tr><td class="text-muted">4,0–5,5</td><td>Mittelmäßiger Tölt – erkennbare Fehler</td></tr>
+          <tr><td><span class="text-red">0,0–3,5</span></td><td>Deutliche Gangfehler – Trabeinlagen, starke Taktfehler</td></tr>
+        </tbody>
+      </table></div>
+
+      <h4>Erkannte Fehler</h4>
+      <p>Unter dem Score siehst du eine Liste der erkannten Fehler mit Frame-Nummer und Schweregrad:</p>
+      <ul>
+        <li><strong>Trabeinlage</strong> <span class="text-red">(schwer)</span> – Diagonalpaar landet gleichzeitig → −1,5 Punkte</li>
+        <li><strong>Pass-Einlage</strong> <span style="color:#FFA500;">(mittel)</span> – Lateralpaar landet gleichzeitig → −0,8 Punkte</li>
+        <li><strong>Takt-Unregelmäßigkeit</strong> <span class="text-muted">(leicht)</span> – Beat-Intervall weicht >20% ab → −0,3 Punkte</li>
+      </ul>
+      <div class="callout callout-danger">
+        <strong>Wichtiger Hinweis:</strong> Der Tölt-Score ist kein offizieller FEIF-Befund. Er dient als Trainings- und Analysehilfe. Offizielle Bewertungen können nur von FEIF-lizenzierten Richtern vorgenommen werden.
+      </div>
+    </section>
+
+    <!-- RENNPASS SCORE -->
+    <section id="rennpass-score" class="section-anchor">
+      <h2>Rennpass-Score</h2>
+      <p>Der Rennpass-Score bewertet die Qualität des Rennpass. Zusätzlich zum Gesamtscore siehst du:</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Metrik</th><th>Bedeutung</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>Lateral-Synchronizität</strong></td>
+            <td>Wie synchron bewegen sich die Lateralpaare (VL+HL, VR+HR). Hoher Wert = guter Rennpass.</td>
+          </tr>
+          <tr>
+            <td><strong>Schwebephase</strong></td>
+            <td>Wird eine Schwebephase erkannt, ist das ein positives Qualitätsmerkmal.</td>
+          </tr>
+          <tr>
+            <td><strong>Stride Count</strong></td>
+            <td>Anzahl der gezählten vollständigen Schritte im Video.</td>
+          </tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- VIDEO PLAYER -->
+    <section id="video-player" class="section-anchor">
+      <h2>Video-Player &amp; Frame-Navigation</h2>
+      <p>Nach der Analyse kannst du das verarbeitete Video mit eingezeichnetem Skelett im Browser abspielen:</p>
+      <ul>
+        <li><strong>Abspielen/Pausieren:</strong> Space-Taste oder Play-Button</li>
+        <li><strong>Frame zurück/vor:</strong> Pfeil-Tasten ← →</li>
+        <li><strong>Zur Fehler-Frame springen:</strong> Klick auf einen Fehler in der Score-Card springt zum entsprechenden Frame</li>
+        <li><strong>Keypoints-Toggle:</strong> Schaltfläche „Keypoints" blendet KI-Gelenkpunkte als Canvas-Overlay ein oder aus (Fesselgelenke grün, andere Gelenke blau) – die Punkte werden nicht ins Video eingebrannt</li>
+        <li><strong>Download:</strong> Schaltfläche „Video herunterladen" speichert das H.264-kodierte Video</li>
+      </ul>
+    </section>
+
+    <!-- LIBRARY -->
+    <section id="library" class="section-anchor">
+      <h2>Video-Bibliothek</h2>
+      <p>In der Bibliothek (Tab „Analyse" → unten) findest du alle deine analysierten Videos:</p>
+      <ul>
+        <li><strong>Suche:</strong> Nach Pferdename oder Dateiname suchen</li>
+        <li><strong>Filter:</strong> Nach Gangart oder Status (Fertig, In Bearbeitung, Fehler) filtern</li>
+        <li><strong>Sortierung:</strong> Nach Datum oder Name sortieren</li>
+        <li><strong>Herunterladen:</strong> Analysiertes Video mit Skelett-Overlay herunterladen</li>
+        <li><strong>Neu analysieren:</strong> Gangart-Erkennung auf den vorhandenen Keypoints erneut ausführen – nützlich nach Aktivierung eines verbesserten Modells. Kein Re-Upload nötig. Die Original-Videodatei ist nach der Verarbeitung gelöscht; neue Keypoints mit einem Fine-tuned-Modell erfordern einen erneuten Upload.</li>
+        <li><strong>Annotieren:</strong> Keypoints manuell korrigieren (öffnet das Annotationstool)</li>
+        <li><strong>Export:</strong> Keypoints als COCO JSON exportieren</li>
+        <li><strong>COCO:</strong> ZIP-Paket mit Frame-JPEGs + coco.json für MMPose-Training exportieren</li>
+        <li><strong>Annot. reset:</strong> Alle manuellen Annotationen für dieses Video löschen (ML-Keypoints bleiben erhalten)</li>
+        <li><strong>Löschen:</strong> Video und alle Analysedaten unwiderruflich entfernen</li>
+      </ul>
+      <div class="callout callout-info">
+        Videos werden nach 24 Stunden automatisch gelöscht, wenn das TTL abgelaufen ist.
+      </div>
+    </section>
+
+    <!-- ANNOTATION -->
+    <section id="annotation" class="section-anchor">
+      <h2>Annotationstool</h2>
+      <p>Das Annotationstool ermöglicht dir, die KI-erkannten Keypoints manuell zu korrigieren. Das verbessert zukünftige Modelle.</p>
+      <ol>
+        <li>Klicke in der Ergebnisansicht auf <strong>„Keypoints korrigieren"</strong></li>
+        <li>Navigiere zu einem Frame, bei dem Keypoints falsch liegen</li>
+        <li>Klicke auf einen Keypoint und ziehe ihn an die richtige Position</li>
+        <li>Klicke <strong>„Speichern"</strong> – die korrigierten Keypoints werden in der Datenbank gespeichert</li>
+        <li>Optional: <strong>COCO-JSON exportieren</strong> für externes Training</li>
+      </ol>
+      <h4>Zoom &amp; Pan</h4>
+      <ul>
+        <li><strong>Mausrad:</strong> Zoomen, zentriert auf die aktuelle Cursor-Position</li>
+        <li><strong>Drag auf leerer Fläche:</strong> Bild verschieben (schwenken)</li>
+        <li><strong>+/−/%-Buttons im Header:</strong> Zoom-Stufen manuell anpassen</li>
+        <li>Beim Wechsel zu einem neuen Frame wird der Zoom automatisch auf Einpassen zurückgesetzt</li>
+      </ul>
+      <div class="callout callout-warn">
+        <strong>Ungespeicherte Änderungen:</strong> Wenn du das Annotationstool schließt und es noch ungespeicherte Keypoint-Korrekturen gibt, erscheint eine Sicherheitsabfrage – damit du keine Arbeit verlierst.
+      </div>
+      <div class="callout callout-info">
+        Die wichtigsten Keypoints für die Takt-Analyse sind die <strong>4 Fesselgelenke</strong> (l_front_hoof, r_front_hoof, l_hind_hoof, r_hind_hoof). Korrekturaufwand lohnt sich dort am meisten.
+      </div>
+    </section>
+
+    <!-- CONTRIBUTE -->
+    <section id="contribute" class="section-anchor">
+      <h2>Trainingsdaten beitragen</h2>
+      <p>Im Tab <strong>„Beitragen"</strong> kannst du Videos für das Training des KI-Modells zur Verfügung stellen:</p>
+      <ol>
+        <li>Video hochladen und <strong>Gangart korrekt angeben</strong> (wichtig für die Trainingsqualität)</li>
+        <li>Die Checkbox <strong>„Für KI-Training freigeben"</strong> aktivieren</li>
+        <li>Der Hinweistext erklärt, was mit dem Video passiert</li>
+        <li>Auf <strong>„Beitragen"</strong> klicken</li>
+      </ol>
+      <p>Nur Videos mit expliziter Freigabe werden für das Training verwendet. Du kannst die Freigabe nicht rückwirkend entziehen – aber du kannst das Video löschen, wodurch alle zugehörigen Daten entfernt werden.</p>
+    </section>
+
+    <!-- ACCOUNT MGMT -->
+    <section id="account-mgmt" class="section-anchor">
+      <h2>Account verwalten</h2>
+      <p>Im Tab <strong>„Account"</strong> (nur wenn angemeldet) findest du:</p>
+      <ul>
+        <li>Deine E-Mail-Adresse und das Registrierungsdatum</li>
+        <li><strong>Abmelden:</strong> Klick auf „Abmelden" entfernt den Token aus dem Browser</li>
+        <li><strong>Account löschen:</strong> Löscht deinen Account und <em>alle</em> zugehörigen Videos, Frames, Keypoints und Annotationen (DSGVO-konform)</li>
+      </ul>
+      <div class="callout callout-danger">
+        <strong>Achtung:</strong> Die Account-Löschung ist unwiderruflich. Alle deine Daten werden sofort und dauerhaft gelöscht.
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section id="faq" class="section-anchor">
+      <h2>Häufige Fragen</h2>
+
+      <h4>Wie lange dauert die Analyse?</h4>
+      <p>Circa 1 Minute pro Videoминute auf einem CPU-only-Server. 4K-Videos werden auf 1920px herunterskaliert. Ein 60-Sekunden-Video dauert typischerweise 5–8 Minuten.</p>
+
+      <h4>Welche Videoformate werden unterstützt?</h4>
+      <p>MP4, MOV, AVI, MKV und WebM bis maximal 4 GB.</p>
+
+      <h4>Warum wird mein Pferd nicht erkannt?</h4>
+      <ul>
+        <li>Pferd zu klein im Bild (mehr als 25 m Abstand)</li>
+        <li>Sehr schlechte Belichtung</li>
+        <li>Pferd von einem Reiter vollständig verdeckt (Okklusion)</li>
+        <li>Aufnahmewinkel nicht seitlich (schräge Perspektive)</li>
+      </ul>
+
+      <h4>Kann ich die App für Turniere nutzen?</h4>
+      <p>Nein. Der Score ist kein offizieller FEIF-Befund und darf nicht als Grundlage für Turnierbewertungen verwendet werden.</p>
+
+      <h4>Werden meine Videos gespeichert?</h4>
+      <p>Videos ohne Account werden nach 24 Stunden automatisch gelöscht. Videos mit Account bleiben gespeichert, bis du sie manuell löscht. Das Original-Upload-Video wird sofort nach der Verarbeitung gelöscht.</p>
+
+      <h4>Funktioniert die App auch auf dem Smartphone?</h4>
+      <p>Die Benutzeroberfläche ist responsive und funktioniert auf dem Smartphone. Das Video hochladen funktioniert über den Datei-Upload. Der Upload großer Videos über mobiles Netz kann jedoch langsam sein.</p>
+
+      <h4>Welche Gangarten werden erkannt?</h4>
+      <p>Alle 5 Islandpferd-Gangarten: Tölt, Trab, Schritt, Galopp und Rennpass. Tölt und Rennpass werden am detailliertesten analysiert.</p>
+    </section>
+
+    <!-- LIMITATIONS -->
+    <section id="limitations" class="section-anchor">
+      <h2>Grenzen der Analyse</h2>
+      <div class="callout callout-warn">
+        <strong>Wichtig zu wissen:</strong> Töltonaut ist ein KI-Tool, das noch in Entwicklung ist. Die folgenden Einschränkungen sind bekannt:
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Limitation</th><th>Ursache</th><th>Geplante Lösung</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Innere Beine schwer erkennbar</td>
+            <td>Okklusion bei Seitenaufnahme</td>
+            <td>Symmetrie-Modell in v0.3</td>
+          </tr>
+          <tr>
+            <td>Schräge Aufnahmewinkel</td>
+            <td>Perspektivverzerrung verfälscht Winkel</td>
+            <td>Winkelkorrektur in v0.3</td>
+          </tr>
+          <tr>
+            <td>Reiter als Okklusor</td>
+            <td>Rücken und Widerrist werden verdeckt</td>
+            <td>Separates Segmentierungsmodell</td>
+          </tr>
+          <tr>
+            <td>Keine Gangart-Klassifikation auf Islandpferd-spezifischen Daten</td>
+            <td>Kein öffentliches Tölt-Dataset</td>
+            <td>Nutzerbeiträge in v1.0</td>
+          </tr>
+        </tbody>
+      </table></div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  const anchors = document.querySelectorAll('.section-anchor');
+  const links = document.querySelectorAll('.sidebar a');
+  window.addEventListener('scroll', () => {
+    let current = '';
+    anchors.forEach(a => { if (window.scrollY >= a.offsetTop - 80) current = a.id; });
+    links.forEach(l => {
+      l.classList.toggle('active', l.getAttribute('href') === '#' + current);
+    });
+  });
+</script>
+</body>
+</html>

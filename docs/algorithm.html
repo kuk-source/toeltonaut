@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Skelett &amp; Algorithmik – Töltonaut Docs</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .diagram-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem;
+      overflow-x: auto;
+    }
+    .legend-row { display: flex; flex-wrap: wrap; gap: .75rem 1.5rem; margin-top: .75rem; }
+    .legend-item { display: flex; align-items: center; gap: .5rem; font-size: .8rem; color: var(--muted); }
+    .legend-line { width: 28px; height: 3px; border-radius: 2px; }
+    .legend-dot-solid { width: 12px; height: 12px; border-radius: 50%; }
+    .legend-dot-hollow { width: 12px; height: 12px; border-radius: 50%; border: 2px solid; background: transparent; }
+    .kp-table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+    .kp-table th { background: var(--surface2); color: var(--primary); font-weight: 600;
+                   padding: .45rem .75rem; text-align: left; border-bottom: 1px solid var(--border); }
+    .kp-table td { padding: .38rem .75rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    .kp-table tr:hover td { background: var(--surface2); }
+    .badge { display: inline-block; padding: .15rem .45rem; border-radius: 4px; font-size: .72rem; font-weight: 600; }
+    .badge-p1 { background: #C8102E33; color: #ff6b6b; }
+    .badge-p2 { background: #003F8733; color: #A8D8EA; }
+    .badge-p3 { background: #2D2D3A; color: #888; }
+    .dot-color { width: 12px; height: 12px; border-radius: 50%; display: inline-block; vertical-align: middle; }
+    .detail-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    @media (max-width: 640px) { .detail-wrap { grid-template-columns: 1fr; } }
+    .detail-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+                   padding: 1rem; text-align: center; }
+    .detail-card h4 { color: var(--primary); font-size: .85rem; margin-bottom: .75rem; }
+    .formula-box { background: var(--surface2); border-left: 3px solid var(--primary);
+                   padding: .75rem 1rem; border-radius: 0 var(--radius) var(--radius) 0;
+                   font-family: 'JetBrains Mono', monospace; font-size: .82rem; color: var(--white); }
+    .gait-timeline { display: grid; grid-template-columns: auto 1fr; gap: .3rem .8rem; align-items: center;
+                     font-size: .82rem; }
+    .gait-leg { color: var(--muted); font-weight: 600; white-space: nowrap; }
+    .gait-beats { display: flex; gap: 4px; }
+    .beat { width: 20px; height: 14px; border-radius: 3px; background: var(--surface2); }
+    .beat.down { background: var(--green); }
+    .beat.trab { background: var(--red); }
+    .section-title { font-size: 1.1rem; font-weight: 600; color: var(--primary); margin-bottom: .5rem;
+                     padding-bottom: .3rem; border-bottom: 1px solid var(--border); }
+  </style>
+</head>
+<body>
+
+<nav class="topnav">
+  <span class="brand">Tölt<span>onaut</span> · Docs</span>
+  <nav>
+    <a href="index.html">Übersicht</a>
+    <a href="architecture.html">Architektur</a>
+    <a href="algorithm.html" class="active">Algorithmik</a>
+    <a href="developer.html">Entwickler</a>
+    <a href="product.html">Produkt</a>
+    <a href="user-manual.html">Handbuch</a>
+    <a href="changelog.html">Changelog</a>
+  </nav>
+</nav>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Überblick</div>
+      <a href="#overview">Wie es funktioniert</a>
+      <a href="#diagram">Keypoint-Diagramm</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Gelenke</div>
+      <a href="#legs">Beingelenke im Detail</a>
+      <a href="#keypoints-table">Alle 31 Keypoints</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Algorithmen</div>
+      <a href="#proportional">v0.1 Proportionalschätzung</a>
+      <a href="#gait">Gangart-Erkennung</a>
+      <a href="#gait">↳ LAP / Duty Factor</a>
+      <a href="#gait">↳ Tölt-Subklassifikation</a>
+      <a href="#tolt-scoring">Tölt-Scoring</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Versionen</div>
+      <a href="#versions">v0.1 → v0.3</a>
+    </div>
+  </aside>
+
+  <main class="content">
+
+    <div style="margin-bottom:2rem">
+      <h1 style="font-size:1.8rem;font-weight:700;color:var(--white)">Skelett-Erkennung &amp; Gangart-Analyse</h1>
+      <p style="color:var(--muted);margin-top:.4rem">Wie Töltonaut Gelenkpositionen ermittelt und daraus Gangart, Takt und Tölt-Qualität berechnet</p>
+    </div>
+
+    <!-- ── OVERVIEW ─────────────────────────────── -->
+    <section id="overview" style="margin-bottom:2.5rem">
+      <div class="section-title">Wie es funktioniert</div>
+      <p style="margin-bottom:1rem">
+        Töltonaut analysiert jeden Frame eines Videos in drei Schritten:
+      </p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin-bottom:1rem">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem">
+          <div style="color:var(--green);font-weight:700;font-size:.85rem;margin-bottom:.4rem">① YOLO-Erkennung + Focus-Lock</div>
+          <p style="font-size:.82rem;color:var(--muted)">YOLOv8n-seg erkennt Pferd (Klasse 17) und Person (Klasse 0) mit Pixel-Masken. Das erste Fokuspferd wird per Zentrum-Distanz über alle Frames verfolgt – kein Wechsel bei ungünstigem Kamerawinkel. Algorithmus und Annotations-UI referenzieren so konsistent dasselbe Pferd.</p>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem">
+          <div style="color:var(--primary);font-weight:700;font-size:.85rem;margin-bottom:.4rem">② Keypoint-Schätzung</div>
+          <p style="font-size:.82rem;color:var(--muted)">Aus der Bounding Box werden 31 Gelenkpositionen berechnet – proportional (v0.1) oder per ML-Modell (v0.2).</p>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem">
+          <div style="color:var(--red);font-weight:700;font-size:.85rem;margin-bottom:.4rem">③ Gangart-Analyse</div>
+          <p style="font-size:.82rem;color:var(--muted)">Die Fesselgelenk-Trajektorien über alle Frames werden ausgewertet: Takt, Gleichmäßigkeit, Sequenz und Fehler.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── MAIN DIAGRAM ─────────────────────────── -->
+    <section id="diagram" style="margin-bottom:2.5rem">
+      <div class="section-title">Keypoint-Schema – 22 Gelenke (Horse-10)</div>
+      <p style="font-size:.85rem;color:var(--muted);margin-bottom:.75rem">
+        Ansicht: Pferd schaut nach links (Standard-Kameraposition). <strong style="color:var(--white)">Ausgefüllte Punkte</strong> = nahe Seite (sichtbar). <strong style="color:var(--white)">Ringe</strong> = ferne Seite (verdeckt). Zahlen = Keypoint-Index.
+      </p>
+      <div class="diagram-wrap">
+        <img src="horse_keypoints.png"
+             alt="Töltender Islandpferd mit 22 Keypoints (Horse-10 Schema)"
+             style="width:100%;max-width:860px;display:block;margin:0 auto;border-radius:8px;">
+      </div>
+
+      <!-- Legende -->
+      <div class="legend-row" style="margin-top:1rem">
+        <div class="legend-item">
+          <div class="legend-line" style="background:#003F87"></div>
+          <span>Rückenlinie / Hals</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-line" style="background:#00C896"></div>
+          <span>Vorderbein – nahe Seite</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-line" style="background:#64C896; opacity:.8"></div>
+          <span>Vorderbein – ferne Seite</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-line" style="background:#A8D8EA"></div>
+          <span>Hinterbein – nahe Seite</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-line" style="background:#7898B8; opacity:.8"></div>
+          <span>Hinterbein – ferne Seite</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot-solid" style="background:#00C896"></div>
+          <span>Nahe Seite (ausgefüllt)</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot-hollow" style="border-color:#64C896"></div>
+          <span>Ferne Seite (Ring)</span>
+        </div>
+        <div class="legend-item" style="margin-left:auto">
+          <div style="width:14px;height:14px;border-radius:50%;background:#00C896;border:1.5px solid #1A1A2E;display:inline-block"></div>
+          <span>Gr. 8 = Huf</span>
+        </div>
+        <div class="legend-item">
+          <div style="width:12px;height:12px;border-radius:50%;background:#00C896;border:1.5px solid #1A1A2E;display:inline-block"></div>
+          <span>Gr. 7 = Fessel / Sprung</span>
+        </div>
+        <div class="legend-item">
+          <div style="width:10px;height:10px;border-radius:50%;background:#00C896;border:1.5px solid #1A1A2E;display:inline-block"></div>
+          <span>Gr. 6 = Karpus / Stifle</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── LEG DETAILS ────────────────────────────── -->
+    <section id="legs" style="margin-bottom:2.5rem">
+      <div class="section-title">Beingelenke im Detail</div>
+      <p style="font-size:.85rem;color:var(--muted);margin-bottom:1rem">
+        Jedes Bein hat eine vollständige Gelenkkette. Die Koordinaten basieren auf den proportionalen Verhältnissen der Bounding Box.
+      </p>
+      <div class="detail-wrap">
+
+        <!-- Front leg detail -->
+        <div class="detail-card">
+          <h4>Vorderbein – 5 Gelenke</h4>
+          <!-- SVG: viewBox 280×480, near-side joints only -->
+          <!-- y = 40 + (ratio_y - 0.35)/0.62 * 380 -->
+          <!-- l_shoulder (0.35): y=40  l_elbow (0.50): y=132  l_knee (0.63): y=212  l_fetlock (0.87): y=359  l_hoof (0.97): y=420 -->
+          <!-- x: centered at 140 -->
+          <svg viewBox="0 0 280 480" style="width:100%;max-width:200px">
+            <!-- Bone lines -->
+            <line x1="140" y1="40"  x2="130" y2="132" stroke="#00C896" stroke-width="3" stroke-linecap="round"/>
+            <line x1="130" y1="132" x2="137" y2="212" stroke="#00C896" stroke-width="3" stroke-linecap="round"/>
+            <line x1="137" y1="212" x2="132" y2="359" stroke="#00C896" stroke-width="3" stroke-linecap="round"/>
+            <line x1="132" y1="359" x2="132" y2="420" stroke="#00C896" stroke-width="4" stroke-linecap="round"/>
+            <!-- Joints -->
+            <circle cx="140" cy="40"  r="7" fill="#00C896" stroke="#1A1A2E" stroke-width="2"/>
+            <circle cx="130" cy="132" r="7" fill="#00C896" stroke="#1A1A2E" stroke-width="2"/>
+            <circle cx="137" cy="212" r="8" fill="#00C896" stroke="#1A1A2E" stroke-width="2"/>
+            <circle cx="132" cy="359" r="9" fill="#00C896" stroke="#1A1A2E" stroke-width="2"/>
+            <circle cx="132" cy="420" r="11" fill="#00C896" stroke="#1A1A2E" stroke-width="2"/>
+            <!-- Labels right side -->
+            <g font-family="Inter,sans-serif" font-size="12" fill="#E8EDF2">
+              <text x="155" y="45" dominant-baseline="middle">Schultergelenk <tspan fill="#666">idx 22</tspan></text>
+              <text x="145" y="136" dominant-baseline="middle">Ellbogengelenk <tspan fill="#666">idx 24</tspan></text>
+              <text x="150" y="216" dominant-baseline="middle">Karpalgelenk <tspan fill="#666">idx 16</tspan></text>
+              <text x="148" y="363" dominant-baseline="middle">Fesselgelenk <tspan fill="#C8102E" font-weight="600">Prio 1 · idx 12</tspan></text>
+              <text x="148" y="424" dominant-baseline="middle">Huf <tspan fill="#C8102E" font-weight="600">Prio 1 · idx 8</tspan></text>
+            </g>
+          </svg>
+          <p style="font-size:.75rem;color:var(--muted);margin-top:.5rem">
+            Nahezu senkrechte Linie.<br>Karpus = das „Knie" beim Pferd (entspricht dem menschlichen Handgelenk).
+          </p>
+        </div>
+
+        <!-- Hind leg detail -->
+        <div class="detail-card">
+          <h4>Hinterbein – 5 Gelenke</h4>
+          <!-- y = 40 + (ratio_y - 0.38)/0.59 * 380 -->
+          <!-- l_hip (0.38): y=40  stifle (0.58): y=169  hock (0.72): y=259  fetlock (0.87): y=356  hoof (0.97): y=420 -->
+          <!-- x: hip=200, stifle=120, hock=160, fetlock=150, hoof=150 (characteristic Z-shape) -->
+          <svg viewBox="0 0 280 480" style="width:100%;max-width:200px">
+            <!-- Bone lines -->
+            <line x1="200" y1="40"  x2="120" y2="169" stroke="#A8D8EA" stroke-width="3" stroke-linecap="round"/>
+            <line x1="120" y1="169" x2="158" y2="259" stroke="#A8D8EA" stroke-width="3" stroke-linecap="round"/>
+            <line x1="158" y1="259" x2="148" y2="356" stroke="#A8D8EA" stroke-width="3" stroke-linecap="round"/>
+            <line x1="148" y1="356" x2="148" y2="420" stroke="#A8D8EA" stroke-width="4" stroke-linecap="round"/>
+            <!-- Joints -->
+            <circle cx="200" cy="40"  r="7"  fill="#A8D8EA" stroke="#1A1A2E" stroke-width="2"/>
+            <circle cx="120" cy="169" r="8"  fill="#A8D8EA" stroke="#1A1A2E" stroke-width="2"/>
+            <circle cx="158" cy="259" r="9"  fill="#A8D8EA" stroke="#1A1A2E" stroke-width="2"/>
+            <circle cx="148" cy="356" r="9"  fill="#A8D8EA" stroke="#1A1A2E" stroke-width="2"/>
+            <circle cx="148" cy="420" r="11" fill="#A8D8EA" stroke="#1A1A2E" stroke-width="2"/>
+            <!-- Labels -->
+            <g font-family="Inter,sans-serif" font-size="12" fill="#E8EDF2">
+              <text x="18" y="44" dominant-baseline="middle">Hüftgelenk <tspan fill="#666">idx 20</tspan></text>
+              <text x="18" y="173" dominant-baseline="middle">Kniegelenk (Stifle) <tspan fill="#666">idx 18</tspan></text>
+              <text x="18" y="263" dominant-baseline="middle" font-weight="600">Sprunggelenk <tspan fill="#666" font-weight="400">idx 26</tspan></text>
+              <text x="18" y="360" dominant-baseline="middle">Fesselgelenk <tspan fill="#C8102E" font-weight="600">Prio 1 · idx 14</tspan></text>
+              <text x="18" y="424" dominant-baseline="middle">Huf <tspan fill="#C8102E" font-weight="600">Prio 1 · idx 10</tspan></text>
+            </g>
+            <!-- Winkel-Annotation am Sprunggelenk -->
+            <path d="M 158,259 L 175,230 L 175,285 Z" fill="#A8D8EA" opacity="0.15"/>
+            <text x="180" y="258" font-family="Inter,sans-serif" font-size="10" fill="#A8D8EA" opacity="0.7">⟵ Knick</text>
+          </svg>
+          <p style="font-size:.75rem;color:var(--muted);margin-top:.5rem">
+            Z-Form durch Sprunggelenk-Knick.<br>Sprunggelenk = Hock/Tarsus (entspricht der menschlichen Ferse).
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── KEYPOINTS TABLE ────────────────────────── -->
+    <section id="keypoints-table" style="margin-bottom:2.5rem">
+      <div class="section-title">Alle 31 Keypoints</div>
+      <p style="font-size:.85rem;color:var(--muted);margin-bottom:.75rem">
+        Koordinaten als Anteil der Bounding Box: x (0 = Nase, 1 = Schweif), y (0 = oben, 1 = unten). Gelten für Ansicht von links.
+      </p>
+      <div style="overflow-x:auto">
+        <table class="kp-table">
+          <thead>
+            <tr>
+              <th style="width:3rem">Idx</th>
+              <th>Name (Code)</th>
+              <th>Deutsch</th>
+              <th>x</th>
+              <th>y</th>
+              <th>Gruppe</th>
+              <th>Priorität</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>0</td> <td><code>nose</code></td>             <td>Nase</td>                <td>.05</td><td>.10</td><td><span class="dot-color" style="background:#A8D8EA"></span> Kopf</td><td>–</td></tr>
+            <tr><td>1</td> <td><code>left_eye</code></td>         <td>Linkes Auge</td>         <td>.09</td><td>.07</td><td><span class="dot-color" style="background:#A8D8EA"></span> Kopf</td><td>–</td></tr>
+            <tr><td>2</td> <td><code>right_eye</code></td>        <td>Rechtes Auge</td>        <td>.11</td><td>.07</td><td><span class="dot-color" style="background:#A8D8EA"></span> Kopf</td><td>–</td></tr>
+            <tr><td>3</td> <td><code>left_ear</code></td>         <td>Linkes Ohr</td>          <td>.08</td><td>.02</td><td><span class="dot-color" style="background:#A8D8EA"></span> Kopf</td><td>–</td></tr>
+            <tr><td>4</td> <td><code>right_ear</code></td>        <td>Rechtes Ohr</td>         <td>.10</td><td>.02</td><td><span class="dot-color" style="background:#A8D8EA"></span> Kopf</td><td>–</td></tr>
+            <tr><td>5</td> <td><code>throat</code></td>           <td>Kehlgang</td>            <td>.15</td><td>.20</td><td><span class="dot-color" style="background:#A8D8EA"></span> Kopf</td><td>–</td></tr>
+            <tr><td>6</td> <td><code>withers</code></td>          <td>Widerrist</td>           <td>.30</td><td>.22</td><td><span class="dot-color" style="background:#2060C0"></span> Rücken</td><td>–</td></tr>
+            <tr><td>7</td> <td><code>tail_base</code></td>        <td>Schweifansatz</td>       <td>.88</td><td>.30</td><td><span class="dot-color" style="background:#2060C0"></span> Rücken</td><td>–</td></tr>
+            <tr style="background:rgba(200,16,46,.07)"><td>8</td>  <td><code>l_front_hoof</code></td>    <td>Huf VL</td>   <td>.22</td><td>.97</td><td><span class="dot-color" style="background:#00C896"></span> VB nahe</td><td><span class="badge badge-p1">Prio 1</span></td></tr>
+            <tr style="background:rgba(200,16,46,.04)"><td>9</td>  <td><code>r_front_hoof</code></td>    <td>Huf VR</td>   <td>.27</td><td>.97</td><td><span class="dot-color" style="border:2px solid #64C896"></span> VB fern</td><td><span class="badge badge-p1">Prio 1</span></td></tr>
+            <tr style="background:rgba(200,16,46,.07)"><td>10</td> <td><code>l_hind_hoof</code></td>     <td>Huf HL</td>   <td>.74</td><td>.97</td><td><span class="dot-color" style="background:#A8D8EA"></span> HB nahe</td><td><span class="badge badge-p1">Prio 1</span></td></tr>
+            <tr style="background:rgba(200,16,46,.04)"><td>11</td> <td><code>r_hind_hoof</code></td>     <td>Huf HR</td>   <td>.80</td><td>.97</td><td><span class="dot-color" style="border:2px solid #7898B8"></span> HB fern</td><td><span class="badge badge-p1">Prio 1</span></td></tr>
+            <tr style="background:rgba(200,16,46,.07)"><td>12</td> <td><code>l_front_fetlock</code></td> <td>Fesselgelenk VL</td><td>.22</td><td>.87</td><td><span class="dot-color" style="background:#00C896"></span> VB nahe</td><td><span class="badge badge-p1">Prio 1 · Takt</span></td></tr>
+            <tr style="background:rgba(200,16,46,.04)"><td>13</td> <td><code>r_front_fetlock</code></td> <td>Fesselgelenk VR</td><td>.27</td><td>.87</td><td><span class="dot-color" style="border:2px solid #64C896"></span> VB fern</td><td><span class="badge badge-p1">Prio 1 · Takt</span></td></tr>
+            <tr style="background:rgba(200,16,46,.07)"><td>14</td> <td><code>l_hind_fetlock</code></td>  <td>Fesselgelenk HL</td><td>.74</td><td>.87</td><td><span class="dot-color" style="background:#A8D8EA"></span> HB nahe</td><td><span class="badge badge-p1">Prio 1 · Takt</span></td></tr>
+            <tr style="background:rgba(200,16,46,.04)"><td>15</td> <td><code>r_hind_fetlock</code></td>  <td>Fesselgelenk HR</td><td>.80</td><td>.87</td><td><span class="dot-color" style="border:2px solid #7898B8"></span> HB fern</td><td><span class="badge badge-p1">Prio 1 · Takt</span></td></tr>
+            <tr><td>16</td> <td><code>l_front_knee</code></td>    <td>Karpalgelenk VL</td>    <td>.23</td><td>.63</td><td><span class="dot-color" style="background:#00C896"></span> VB nahe</td><td><span class="badge badge-p2">Prio 2</span></td></tr>
+            <tr><td>17</td> <td><code>r_front_knee</code></td>    <td>Karpalgelenk VR</td>    <td>.28</td><td>.63</td><td><span class="dot-color" style="border:2px solid #64C896"></span> VB fern</td><td><span class="badge badge-p2">Prio 2</span></td></tr>
+            <tr><td>18</td> <td><code>l_hind_knee</code></td>     <td>Kniegelenk HL (Stifle)</td><td>.71</td><td>.58</td><td><span class="dot-color" style="background:#A8D8EA"></span> HB nahe</td><td><span class="badge badge-p2">Prio 2</span></td></tr>
+            <tr><td>19</td> <td><code>r_hind_knee</code></td>     <td>Kniegelenk HR (Stifle)</td><td>.76</td><td>.58</td><td><span class="dot-color" style="border:2px solid #7898B8"></span> HB fern</td><td><span class="badge badge-p2">Prio 2</span></td></tr>
+            <tr><td>20</td> <td><code>l_hip</code></td>           <td>Hüftgelenk L</td>       <td>.75</td><td>.38</td><td><span class="dot-color" style="background:#A8D8EA"></span> HB nahe</td><td><span class="badge badge-p2">Prio 2</span></td></tr>
+            <tr><td>21</td> <td><code>r_hip</code></td>           <td>Hüftgelenk R</td>       <td>.80</td><td>.40</td><td><span class="dot-color" style="border:2px solid #7898B8"></span> HB fern</td><td><span class="badge badge-p2">Prio 2</span></td></tr>
+            <tr><td>22</td> <td><code>l_shoulder</code></td>      <td>Schultergelenk VL</td>  <td>.24</td><td>.35</td><td><span class="dot-color" style="background:#00C896"></span> VB nahe</td><td><span class="badge badge-p3">Prio 3</span></td></tr>
+            <tr><td>23</td> <td><code>r_shoulder</code></td>      <td>Schultergelenk VR</td>  <td>.29</td><td>.35</td><td><span class="dot-color" style="border:2px solid #64C896"></span> VB fern</td><td><span class="badge badge-p3">Prio 3</span></td></tr>
+            <tr><td>24</td> <td><code>l_elbow</code></td>         <td>Ellbogengelenk VL</td>  <td>.22</td><td>.50</td><td><span class="dot-color" style="background:#00C896"></span> VB nahe</td><td><span class="badge badge-p3">Prio 3</span></td></tr>
+            <tr><td>25</td> <td><code>r_elbow</code></td>         <td>Ellbogengelenk VR</td>  <td>.27</td><td>.50</td><td><span class="dot-color" style="border:2px solid #64C896"></span> VB fern</td><td><span class="badge badge-p3">Prio 3</span></td></tr>
+            <tr><td>26</td> <td><code>l_hock</code></td>          <td>Sprunggelenk HL</td>    <td>.73</td><td>.72</td><td><span class="dot-color" style="background:#A8D8EA"></span> HB nahe</td><td><span class="badge badge-p2">Prio 2</span></td></tr>
+            <tr><td>27</td> <td><code>r_hock</code></td>          <td>Sprunggelenk HR</td>    <td>.78</td><td>.72</td><td><span class="dot-color" style="border:2px solid #7898B8"></span> HB fern</td><td><span class="badge badge-p2">Prio 2</span></td></tr>
+            <tr style="background:rgba(0,63,135,.08)"><td>28</td> <td><code>poll</code></td>          <td>Genick (Hals-Kopf-Übergang)</td><td>.12</td><td>.05</td><td><span class="dot-color" style="background:#003F87"></span> Topline</td><td><span class="badge badge-p2">Prio 2</span></td></tr>
+            <tr style="background:rgba(0,63,135,.05)"><td>29</td> <td><code>back_mid</code></td>      <td>Rückenmitte</td>             <td>.58</td><td>.26</td><td><span class="dot-color" style="background:#003F87"></span> Topline</td><td><span class="badge badge-p2">Prio 2</span></td></tr>
+            <tr style="background:rgba(0,63,135,.08)"><td>30</td> <td><code>croup</code></td>         <td>Kruppe (Tuber sacrale)</td>  <td>.78</td><td>.23</td><td><span class="dot-color" style="background:#003F87"></span> Topline</td><td><span class="badge badge-p2">Prio 2</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="font-size:.75rem;color:var(--muted);margin-top:.6rem">
+        VL = vorne links · VR = vorne rechts · HL = hinten links · HR = hinten rechts.
+        In v0.2 (MMPose Horse-10) stehen Indizes 0–21 vom Modell zur Verfügung; 22–30 werden weiterhin proportional ergänzt.
+        Topline-Punkte (28–30) sind neu in v0.1.1 und verbessern die Gangart-Analyse ab v0.2.
+      </p>
+    </section>
+
+    <!-- ── PROPORTIONAL ESTIMATION ───────────────── -->
+    <section id="proportional" style="margin-bottom:2.5rem">
+      <div class="section-title">v0.1 – Proportionale Schätzung</div>
+      <p style="margin-bottom:.75rem">
+        In v0.1 werden <strong>keine ML-Modelle</strong> für die Gelenkpositionen verwendet.
+        Stattdessen werden die Positionen direkt aus der Bounding Box der YOLO-Erkennung berechnet.
+        Jeder Keypoint ist als festes Verhältnis (x-Ratio, y-Ratio) der Box-Abmessungen definiert.
+      </p>
+      <div class="formula-box" style="margin-bottom:1rem">
+px = x1 + x_ratio × (x2 − x1)<br>
+py = y1 + y_ratio × (y2 − y1)
+      </div>
+      <p style="margin-bottom:.75rem">
+        Steht das Pferd nach <strong>rechts</strong>, wird x gespiegelt:
+      </p>
+      <div class="formula-box" style="margin-bottom:1rem">
+px = x1 + (1 − x_ratio) × (x2 − x1)  <span style="color:#666"># facing right</span>
+      </div>
+      <p style="font-size:.85rem;color:var(--muted)">
+        Die Fahrtrichtung erkennt der Algorithmus per <strong>Pixel-Varianz</strong>:
+        Der Bildausschnitt hinter dem Kopf hat bei einem Pferd im Profil eine höhere Texturvarianz als der Schwanzbereich – wegen Mähne, Augen und Nüstern.
+        Wenn σ(linker Drittelstreifen) ≥ σ(rechter Drittelstreifen) → Pferd schaut nach links.
+      </p>
+    </section>
+
+    <!-- ── GAIT DETECTION ────────────────────────── -->
+    <section id="gait" style="margin-bottom:2.5rem">
+      <div class="section-title">Gangart-Erkennung – Biomechanische Grundlagen</div>
+      <p style="margin-bottom:1rem">
+        Die korrekte algorithmische Klassifikation der Islandpferde-Gangarten basiert auf zwei biomechanischen Kernmetriken,
+        die aus den Zeitstempeln der Fußungsevents berechnet werden:
+      </p>
+
+      <!-- LAP + DF Formeln -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.2rem">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.9rem">
+          <div style="font-weight:700;color:var(--green);font-size:.85rem;margin-bottom:.5rem">LAP – Lateral Advanced Placement</div>
+          <p style="font-size:.8rem;color:var(--muted);margin-bottom:.6rem">
+            Phasenversatz zwischen ipsilateralem Hinter- und Vorderhuf als % der Schrittzyklusdauer.
+            Das entscheidende Unterscheidungsmerkmal zwischen Tölt, Schritt, Trab und Rennpass.
+          </p>
+          <div class="formula-box" style="font-size:.76rem">
+LAP = (t_FO_LF − t_FO_LH) / T_stride<br>
+<span style="color:#666">FO  = Foot-On  (lokales Y-Maximum der Fessel-Trajektorie)</span><br>
+<span style="color:#666">T   = t_FO_LH[k+1] − t_FO_LH[k]  (eine Stride)</span>
+          </div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.9rem">
+          <div style="font-weight:700;color:var(--primary);font-size:.85rem;margin-bottom:.5rem">DF – Duty Factor</div>
+          <p style="font-size:.8rem;color:var(--muted);margin-bottom:.6rem">
+            Prozentualer Anteil eines Schrittzyklus, in dem ein Bein Bodenkontakt hat.
+            Hoher DF = langsame Gangarten mit vielen Stützbeinen. Niedriger DF = Schwebephase.
+          </p>
+          <div class="formula-box" style="font-size:.76rem">
+DF_j = (t_FOFF_j − t_FO_j) / T_stride<br>
+<span style="color:#666">FOFF = Foot-Off (Y beginnt zu sinken nach Foot-On)</span><br>
+<span style="color:#666">DF &lt; 50% → Schwebephase möglich</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ground-Truth-Matrix -->
+      <div style="margin-bottom:1.5rem">
+        <div style="font-weight:600;color:var(--white);font-size:.88rem;margin-bottom:.6rem">
+          Biomechanische Wahrheitsmatrix (Ground Truth Matrix)
+        </div>
+        <div style="overflow-x:auto">
+          <table class="kp-table">
+            <thead>
+              <tr>
+                <th>Gangart</th>
+                <th>LAP</th>
+                <th>Duty Factor</th>
+                <th>Schwebephase</th>
+                <th>Stützphasen</th>
+                <th>Takt</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong style="color:var(--white)">Schritt</strong></td>
+                <td><code>~25%</code></td>
+                <td>60–70%</td>
+                <td style="color:var(--green)">Nein</td>
+                <td>2-Bein, 3-Bein, (4-Bein)</td>
+                <td>4-Takt lateral</td>
+              </tr>
+              <tr>
+                <td><strong style="color:var(--white)">Trab</strong></td>
+                <td><code>~50%</code></td>
+                <td>30–55%</td>
+                <td style="color:var(--red)">Ja</td>
+                <td>0-Bein (Schwebe), 2-Bein diagonal</td>
+                <td>2-Takt diagonal</td>
+              </tr>
+              <tr>
+                <td><strong style="color:var(--white)">Galopp</strong></td>
+                <td><code>N/A</code></td>
+                <td>20–30%</td>
+                <td style="color:var(--red)">Ja</td>
+                <td>0-Bein (Schwebe), 1-Bein, 2-Bein</td>
+                <td>3-Takt (asym.)</td>
+              </tr>
+              <tr style="background:rgba(0,200,150,.06)">
+                <td><strong style="color:var(--green)">Tölt ★</strong></td>
+                <td><code>~25%</code></td>
+                <td>30–55%</td>
+                <td style="color:var(--green)">Nein (&lt;1,5%)</td>
+                <td>1-Bein, 2-Bein</td>
+                <td>4-Takt lateral</td>
+              </tr>
+              <tr>
+                <td><strong style="color:var(--white)">Rennpass</strong></td>
+                <td><code>~0%</code></td>
+                <td>&lt;30%</td>
+                <td style="color:var(--red)">Ja (Qualitätsmerkmal)</td>
+                <td>0-Bein (Schwebe), 2-Bein lateral</td>
+                <td>2-Takt lateral</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p style="font-size:.75rem;color:var(--muted);margin-top:.5rem">
+          ★ Tölt und Schritt haben identisches LAP (~25%) – der Unterschied liegt im Duty Factor:
+          Schritt DF ≥ 60% (immer 2–3 Beine am Boden); Tölt DF ≤ 55% (unipedale Stützmomente).
+          Quelle: AJVR 2006, JEB Biomechanik-Literatur
+        </p>
+      </div>
+
+      <!-- Debounce-Hinweis -->
+      <div style="background:rgba(168,216,234,.06);border:1px solid rgba(168,216,234,.2);border-radius:var(--radius);padding:.8rem 1rem;margin-bottom:1rem;font-size:.8rem;color:var(--muted)">
+        <strong style="color:var(--primary)">Gangart-Debounce (MIN_HOLD = 10 Frames ≈ 1 s):</strong>
+        Die angezeigte Gangart wechselt erst, wenn eine neue Gangart in 10 aufeinanderfolgenden Frames mit Konfidenz &gt; 0,40 erkannt wird. Verhindert Flackern zwischen Gangartphasen, besonders bei Übergängen.
+      </div>
+
+      <!-- Entscheidungsbaum -->
+      <div style="margin-bottom:1.5rem">
+        <div style="font-weight:600;color:var(--white);font-size:.88rem;margin-bottom:.6rem">
+          Entscheidungsbaum (deterministisch, v0.2+)
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;font-size:.8rem">
+          <div style="font-family:'JetBrains Mono',monospace;color:var(--white);line-height:1.9">
+            <span style="color:#666">LAP ≈ 50%  UND  DF &lt; 55%</span>  →  <strong style="color:var(--primary)">Trab</strong> (diagonales Zweitakt-Muster)<br>
+            <span style="color:#666">LAP ≈  0%  UND  DF &lt; 30%</span>  →  <strong style="color:var(--white)">Rennpass</strong> (Schwebephase, lateral simultan)<br>
+            <span style="color:#666">LAP 15–35% UND  DF ≥ 60%</span>  →  <strong style="color:var(--muted)">Schritt</strong> (hoher Stützphasenanteil)<br>
+            <span style="color:#666">LAP 15–35% UND  DF &lt; 55%</span>  →  <strong style="color:var(--green)">Tölt</strong>  ← Subklassifikation ↓<br>
+            <span style="color:#666">DF &lt; 30%  UND  asymmetrisch</span> →  <strong style="color:var(--muted)">Galopp</strong> (gesprungene Gangart)
+          </div>
+        </div>
+      </div>
+
+      <!-- Tölt-Subklassifikation -->
+      <div style="background:rgba(0,200,150,.06);border:1px solid rgba(0,200,150,.25);border-radius:var(--radius);padding:1rem;margin-bottom:1.5rem">
+        <div style="font-weight:700;color:var(--green);font-size:.88rem;margin-bottom:.6rem">
+          Tölt-Subklassifikation (FEIF-konform)
+        </div>
+        <p style="font-size:.8rem;color:var(--muted);margin-bottom:.8rem">
+          Das LAP unterscheidet die Tölt-Qualität mit hoher Präzision – Unterschiede, die erfahrene
+          Richter bei hohen Geschwindigkeiten nicht mehr visuell trennen können:
+        </p>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.75rem">
+          <div style="background:var(--surface);border:1px solid var(--red);border-radius:8px;padding:.75rem;text-align:center">
+            <div style="color:var(--red);font-weight:700;font-size:.82rem">LAP &lt; 22%</div>
+            <div style="color:var(--white);font-size:.85rem;font-weight:600;margin:.3rem 0">Passiger Tölt</div>
+            <div style="color:var(--muted);font-size:.75rem">„Piggy-pace" / Schweinepass<br>Rollbewegung im Sattel<br>Taktfehler – Abwertung</div>
+          </div>
+          <div style="background:var(--surface);border:1px solid var(--green);border-radius:8px;padding:.75rem;text-align:center">
+            <div style="color:var(--green);font-weight:700;font-size:.82rem">LAP 22–28%</div>
+            <div style="color:var(--white);font-size:.85rem;font-weight:600;margin:.3rem 0">Korrekter Tölt</div>
+            <div style="color:var(--muted);font-size:.75rem">Ideales LAP = 25%<br>Gleichmäßiger 4-Takt<br>Keine Schwebephase</div>
+          </div>
+          <div style="background:var(--surface);border:1px solid var(--red);border-radius:8px;padding:.75rem;text-align:center">
+            <div style="color:var(--red);font-weight:700;font-size:.82rem">LAP &gt; 28%</div>
+            <div style="color:var(--white);font-size:.85rem;font-weight:600;margin:.3rem 0">Trabiger Tölt</div>
+            <div style="color:var(--muted);font-size:.75rem">„Trotty Tölt"<br>Diagonal-Tendenz<br>Visuell kaum erkennbar</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- v0.1 vs v0.2 -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.2rem">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.9rem">
+          <div style="font-weight:600;color:var(--muted);font-size:.8rem;margin-bottom:.5rem">v0.1 – Bbox-Bewegungs-Heuristik</div>
+          <p style="font-size:.8rem;color:var(--muted);margin-bottom:.6rem">
+            Proportionale Keypoints haben konstante normierte Y-Positionen → LAP/DF nicht berechenbar.
+            Fallback: Bbox-Zentrum-Bewegung als Proxy.
+          </p>
+          <div class="formula-box" style="font-size:.76rem">
+bbox_speed  = Δx_center / h_bbox<br>
+bbox_bounce = var(y_center) / h²
+          </div>
+          <p style="font-size:.76rem;color:var(--muted);margin-top:.5rem">
+            Konfidenz ~40–50%. Ausreichend für grobe Gangart-Erkennung,
+            aber nicht für FEIF-Subklassifikation oder Tölt-Qualitätsbewertung.
+          </p>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.9rem">
+          <div style="font-weight:600;color:var(--green);font-size:.8rem;margin-bottom:.5rem">v0.2+ – LAP/DF aus ML-Keypoints</div>
+          <p style="font-size:.8rem;color:var(--muted);margin-bottom:.6rem">
+            Echte MMPose-Keypoints variieren → Fesselgelenk-Trajektorien → Foot-On-Detektion per lokalem Y-Maximum.
+          </p>
+          <div class="formula-box" style="font-size:.76rem">
+Foot-On: lokales Y-Maximum (Huf am Boden)<br>
+Foot-Off: Y sinkt nach Foot-On<br>
+T_stride: LH_FO[k+1] − LH_FO[k]
+          </div>
+          <p style="font-size:.76rem;color:var(--muted);margin-top:.5rem">
+            Konfidenz 75–88%. FEIF-Subklassifikation möglich. Winkel-Features als Backup.
+          </p>
+        </div>
+      </div>
+
+      <!-- Timing-Diagramme -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1rem">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem">
+          <div style="font-weight:600;color:var(--green);margin-bottom:.6rem">Tölt – LAP 25%, kein Diagonal-Paar</div>
+          <div class="gait-timeline">
+            <span class="gait-leg">HL</span>
+            <div class="gait-beats">
+              <div class="beat down"></div><div class="beat down"></div><div class="beat"></div><div class="beat"></div><div class="beat down"></div><div class="beat down"></div><div class="beat"></div><div class="beat"></div>
+            </div>
+            <span class="gait-leg">VL</span>
+            <div class="gait-beats">
+              <div class="beat"></div><div class="beat down"></div><div class="beat down"></div><div class="beat"></div><div class="beat"></div><div class="beat down"></div><div class="beat down"></div><div class="beat"></div>
+            </div>
+            <span class="gait-leg">HR</span>
+            <div class="gait-beats">
+              <div class="beat"></div><div class="beat"></div><div class="beat down"></div><div class="beat down"></div><div class="beat"></div><div class="beat"></div><div class="beat down"></div><div class="beat down"></div>
+            </div>
+            <span class="gait-leg">VR</span>
+            <div class="gait-beats">
+              <div class="beat down"></div><div class="beat"></div><div class="beat"></div><div class="beat down"></div><div class="beat down"></div><div class="beat"></div><div class="beat"></div><div class="beat down"></div>
+            </div>
+          </div>
+          <p style="font-size:.75rem;color:var(--muted);margin-top:.5rem">
+            Fußfolge: HL→VL→HR→VR. Kein Diagonal-Paar gleichzeitig. Keine Schwebephase.
+          </p>
+        </div>
+
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem">
+          <div style="font-weight:600;color:var(--primary);margin-bottom:.6rem">Trab – LAP 50%, diagonal</div>
+          <div class="gait-timeline">
+            <span class="gait-leg">VL</span>
+            <div class="gait-beats">
+              <div class="beat down"></div><div class="beat down"></div><div class="beat"></div><div class="beat"></div><div class="beat down"></div><div class="beat down"></div><div class="beat"></div><div class="beat"></div>
+            </div>
+            <span class="gait-leg">HR</span>
+            <div class="gait-beats">
+              <div class="beat down"></div><div class="beat down"></div><div class="beat"></div><div class="beat"></div><div class="beat down"></div><div class="beat down"></div><div class="beat"></div><div class="beat"></div>
+            </div>
+            <span class="gait-leg">VR</span>
+            <div class="gait-beats">
+              <div class="beat"></div><div class="beat"></div><div class="beat down"></div><div class="beat down"></div><div class="beat"></div><div class="beat"></div><div class="beat down"></div><div class="beat down"></div>
+            </div>
+            <span class="gait-leg">HL</span>
+            <div class="gait-beats">
+              <div class="beat"></div><div class="beat"></div><div class="beat down"></div><div class="beat down"></div><div class="beat"></div><div class="beat"></div><div class="beat down"></div><div class="beat down"></div>
+            </div>
+          </div>
+          <p style="font-size:.75rem;color:var(--muted);margin-top:.5rem">
+            VL+HR und VR+HL simultan. Zwischen den Diagonalen: Schwebephase. LAP = 50%.
+          </p>
+        </div>
+      </div>
+
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;margin-bottom:1rem">
+        <div style="font-weight:600;color:var(--red);margin-bottom:.5rem">Tölt-Fehler: Trabeinlage und Pass-Einlage</div>
+        <p style="font-size:.83rem;color:var(--muted)">
+          <strong style="color:var(--red)">Trabeinlage</strong>: VL+HR oder VR+HL fußen innerhalb ≤ 3 Frames auf → LAP nähert sich 50%.
+          Im FEIF-Reglement Abwertung oder Disqualifikation.<br>
+          <strong style="color:var(--red)">Pass-Einlage</strong>: VL+HL oder VR+HR simultan → LAP nähert sich 0%.
+          Rollbewegung im Sattel, sichtbarer Taktfehler.
+        </p>
+      </div>
+    </section>
+
+    <!-- ── TOLT SCORING ────────────────────────────── -->
+    <section id="tolt-scoring" style="margin-bottom:2.5rem">
+      <div class="section-title">Tölt-Scoring</div>
+      <p style="margin-bottom:.75rem">
+        Der Tölt-Score (0–10, Schrittweite 0,5 wie FEIF) berechnet sich aus:
+      </p>
+      <div class="formula-box">
+Score = 7,0<br>
+      + Takt-Regelmäßigkeit × 2,0<br>
+      − Trabeinlagen × 1,5<br>
+      − Pass-Einlagen × 0,8<br>
+      − unregelmäßige Takt-Intervalle × 0,3
+      </div>
+      <p style="font-size:.82rem;color:var(--muted);margin-top:.75rem">
+        <strong>Takt-Regelmäßigkeit</strong> = 1 − CV/0,5, wobei CV der Variationskoeffizient der Auftrittszeitabstände ist.
+        Bei perfekt gleichmäßigem Takt ist CV ≈ 0 → Regelmäßigkeit ≈ 1,0 → +2 Punkte.
+        Takt-Unregelmäßigkeit &gt; 20 % vom Median zählt als Fehler.
+      </p>
+    </section>
+
+    <!-- ── VERSIONS ───────────────────────────────── -->
+    <section id="versions" style="margin-bottom:2rem">
+      <div class="section-title">Versionen der Skelett-Erkennung</div>
+      <div style="display:grid;gap:1rem">
+        <div style="background:var(--surface);border:1px solid var(--green);border-radius:var(--radius);padding:1rem">
+          <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.4rem">
+            <span style="background:var(--green);color:#1A1A2E;padding:.15rem .5rem;border-radius:4px;font-size:.75rem;font-weight:700">v0.1 – Aktiv</span>
+            <strong style="color:var(--white)">Proportionale Schätzung (31 KP)</strong>
+          </div>
+          <p style="font-size:.82rem;color:var(--muted)">Alle 31 Keypoints (28 Gelenke + 3 Topline-Punkte: Genick, Rückenmitte, Kruppe) aus Bounding Box. Kein ML-Modell nötig. Gangart-Erkennung über Bbox-Bewegungsfeatures. Winkel-Features vorbereitet für v0.2.</p>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem">
+          <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.4rem">
+            <span style="background:var(--surface2);color:var(--muted);padding:.15rem .5rem;border-radius:4px;font-size:.75rem;font-weight:700">v0.2 – Bereit</span>
+            <strong style="color:var(--white)">MMPose hrnet_w32_horse10 + LAP/DF-Klassifikation</strong>
+          </div>
+          <p style="font-size:.82rem;color:var(--muted)">ML-Modell mit mAP ≈ 88 (Horse-10). Indizes 0–21 vom Modell, 22–30 proportional. Gangart-Erkennung via LAP + Duty Factor aus Fesselgelenk-Trajektorien. FEIF-Tölt-Subklassifikation (passig/korrekt/trabig). Winkel-Features (Hock θ, Karpus θ) als Backup.</p>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem">
+          <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.4rem">
+            <span style="background:var(--surface2);color:var(--muted);padding:.15rem .5rem;border-radius:4px;font-size:.75rem;font-weight:700">v0.3 – Geplant</span>
+            <strong style="color:var(--white)">Fine-tuning + LSTM-Klassifikator</strong>
+          </div>
+          <p style="font-size:.82rem;color:var(--muted)">Custom-Training auf annotierten Islandpferd-Turnier-Videos mit allen 31 KP. Bi-LSTM oder XGBoost auf Keypoint-Zeitreihen trainiert (bis 91% Genauigkeit in IMU-Studien). Likelihood-Filterung (refineDLC) + Schrittzyklusnormierung (AutoGaitA).</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<footer style="border-top:1px solid var(--border);padding:1.5rem 2rem;text-align:center;color:var(--muted);font-size:.8rem">
+  Töltonaut · Algorithmik-Dokumentation · Islandpferdesport
+  <span style="margin-left:1.5rem;opacity:.6">Gangart-Biomechanik: FEIF Sport Regulations + wissenschaftliche Literatur (AJVR, JEB)</span>
+</footer>
+
+</body>
+</html>

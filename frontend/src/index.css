@@ -1,0 +1,57 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-vulkan:        #1A1A2E;
+  --color-lava:          #2D2D3A;
+  --color-gletscherblau: #A8D8EA;
+  --color-islandblau:    #003F87;
+  --color-nordlicht:     #00C896;
+  --color-geysirweiss:   #F0F4F8;
+  --color-flaggenrot:    #C8102E;
+  /* WCAG-konformer Fehlertext auf dunklem Hintergrund (Ratio ≥ 4,5:1) */
+  --color-flaggenrot-text: #FF6B81;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background-color: #1A1A2E;
+  color: #F0F4F8;
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── WCAG 2.1 AA – Focus-Styles ── */
+:focus-visible {
+  outline: 2px solid #A8D8EA;
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+*:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ── WCAG 2.1 AA – Skip-Link ── */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: -9999px;
+}
+.skip-link:focus-visible {
+  left: 1rem;
+  top: 1rem;
+  z-index: 9999;
+  background: #A8D8EA;
+  color: #1A1A2E;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+::-webkit-scrollbar       { width: 6px; }
+::-webkit-scrollbar-track { background: #1A1A2E; }
+::-webkit-scrollbar-thumb { background: #003F87; border-radius: 3px; }

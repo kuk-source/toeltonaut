@@ -1,0 +1,34 @@
+                    GNU AFFERO GENERAL PUBLIC LICENSE
+                       Version 3, 19 November 2007
+
+ Copyright (C) 2024-2026 Kai Keller and contributors.
+
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU Affero General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU Affero General Public License for more details.
+
+ You should have received a copy of the GNU Affero General Public License
+ along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+---
+
+RATIONALE: This project uses Ultralytics YOLOv8 (AGPL-3.0). As a derivative
+work that is made available over a network, it must be licensed under the
+GNU Affero General Public License v3 or later.
+
+THIRD-PARTY LICENSES:
+  - YOLOv8 / Ultralytics     AGPL-3.0   https://github.com/ultralytics/ultralytics
+  - MMPose                   Apache 2.0  https://github.com/open-mmlab/mmpose
+  - Horse-10 Dataset (OVG)   CC BY 4.0   https://robots.ox.ac.uk/~vgg/data/horse10/
+  - FastAPI                  MIT
+  - React                    MIT
+  - Tailwind CSS             MIT
+
+The full AGPL-3.0 license text is available at:
+https://www.gnu.org/licenses/agpl-3.0.txt

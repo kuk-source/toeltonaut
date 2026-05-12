@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Entwickler – Töltonaut Docs</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav class="topnav">
+  <span class="brand">Tölt<span>onaut</span> · Docs</span>
+  <nav>
+    <a href="index.html">Übersicht</a>
+    <a href="architecture.html">Architektur</a>
+    <a href="algorithm.html">Algorithmik</a>
+    <a href="developer.html" class="active">Entwickler</a>
+    <a href="product.html">Produkt</a>
+    <a href="user-manual.html">Handbuch</a>
+    <a href="changelog.html">Changelog</a>
+  </nav>
+</nav>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Setup</div>
+      <a href="#prerequisites">Voraussetzungen</a>
+      <a href="#quickstart">Schnellstart</a>
+      <a href="#local-dev">Lokale Entwicklung</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">API-Referenz</div>
+      <a href="#api-video">Video &amp; Jobs</a>
+      <a href="#api-analysis">Analyse</a>
+      <a href="#api-frames">Frames &amp; Keypoints</a>
+      <a href="#api-auth">Authentifizierung</a>
+      <a href="#api-training">Training, Lern-Loop &amp; ML</a>
+      <a href="#api-system">System</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Backend</div>
+      <a href="#backend-modules">Module</a>
+      <a href="#ai-config">AI-Konfiguration</a>
+      <a href="#add-gait">Neue Gangart</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Frontend</div>
+      <a href="#frontend-structure">Struktur</a>
+      <a href="#frontend-api">API-Client</a>
+      <a href="#i18n">Internationalisierung</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">ML</div>
+      <a href="#ml-upgrade">Modell upgraden</a>
+      <a href="#training-export">COCO Export</a>
+    </div>
+  </aside>
+
+  <main class="content">
+    <div class="page-header">
+      <span class="page-badge badge-dev">Entwickler</span>
+      <h1>Entwicklerdokumentation
+        <span class="subtitle">Setup, API-Referenz, Backend- und Frontend-Guide</span>
+      </h1>
+    </div>
+
+    <!-- PREREQUISITES -->
+    <section id="prerequisites" class="section-anchor">
+      <h2>Voraussetzungen</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Tool</th><th>Version</th><th>Zweck</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Docker</strong></td><td>≥ 24</td><td>Container-Runtime</td></tr>
+            <tr><td><strong>Docker Compose</strong></td><td>≥ 2.20</td><td>Multi-Service-Orchestrierung</td></tr>
+            <tr><td><strong>Git</strong></td><td>beliebig</td><td>Versionskontrolle</td></tr>
+            <tr><td>Python 3.12 <em>(optional)</em></td><td>3.12+</td><td>Nur für lokale Backend-Entwicklung ohne Docker</td></tr>
+            <tr><td>Node.js 20 <em>(optional)</em></td><td>20 LTS</td><td>Nur für lokale Frontend-Entwicklung ohne Docker</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout callout-warn">
+        <strong>GPU-Hinweis:</strong> PyTorch wird mit einem CPU-only-Wheel installiert. GPUs mit <code>sm_61</code> (z.B. GTX 1070) sind mit PyTorch ≥ 2.1 inkompatibel. Das ist eine bewusste Designentscheidung.
+      </div>
+    </section>
+
+    <!-- QUICKSTART -->
+    <section id="quickstart" class="section-anchor">
+      <h2>Schnellstart</h2>
+      <pre><code># Repository klonen
+git clone &lt;repo-url&gt;
+cd Töltonaut
+
+# Alle Services starten (erster Start lädt Images + baut Backend)
+docker compose up
+
+# Im Hintergrund starten
+docker compose up -d
+
+# Logs beobachten
+docker compose logs -f backend
+
+# Services stoppen
+docker compose down</code></pre>
+
+      <p>Nach dem Start:</p>
+      <ul>
+        <li><strong>Frontend:</strong> <a href="http://localhost:5173">http://localhost:5173</a></li>
+        <li><strong>Backend API:</strong> <a href="http://localhost:8000">http://localhost:8000</a></li>
+        <li><strong>Swagger UI:</strong> <a href="http://localhost:8000/docs">http://localhost:8000/docs</a></li>
+        <li><strong>ReDoc:</strong> <a href="http://localhost:8000/redoc">http://localhost:8000/redoc</a></li>
+      </ul>
+
+      <h3>Rebuild nach Code-Änderungen</h3>
+      <pre><code># Backend-Image neu bauen
+docker compose up --build backend
+
+# Nur Backend-Container neu starten
+docker compose restart backend</code></pre>
+    </section>
+
+    <!-- LOCAL DEV -->
+    <section id="local-dev" class="section-anchor">
+      <h2>Lokale Entwicklung (ohne Docker)</h2>
+
+      <h3>Backend</h3>
+      <pre><code>cd backend
+
+# Virtuelle Umgebung
+python -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+
+# PyTorch CPU zuerst (wichtig!)
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+
+# Restliche Abhängigkeiten
+pip install -r requirements.txt
+
+# Umgebungsvariablen setzen
+export DATABASE_URL="postgresql+psycopg://toeltonaut:toeltonaut@localhost:5432/toeltonaut"
+export SECRET_KEY="dev-secret-key-change-in-prod"
+
+# Server starten (Hot-Reload)
+uvicorn app.main:app --reload --port 8000</code></pre>
+
+      <h3>Frontend</h3>
+      <pre><code>cd frontend
+npm install
+npm run dev        # Dev-Server auf Port 5173
+npm run build      # Produktions-Build nach frontend/dist/
+npm run preview    # Produktions-Build lokal vorschauen</code></pre>
+
+      <h3>Umgebungsvariablen</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Variable</th><th>Default</th><th>Beschreibung</th></tr></thead>
+          <tbody>
+            <tr><td><code>DATABASE_URL</code></td><td>—</td><td>psycopg3-DSN, z.B. <code>postgresql+psycopg://user:pw@host/db</code></td></tr>
+            <tr><td><code>SECRET_KEY</code></td><td>—</td><td>JWT-Signing-Secret (in Produktion ändern!)</td></tr>
+            <tr><td><code>UPLOADS_DIR</code></td><td><code>/data/uploads</code></td><td>Pfad für hochgeladene Videos</td></tr>
+            <tr><td><code>OUTPUTS_DIR</code></td><td><code>/data/outputs</code></td><td>Pfad für verarbeitete Videos</td></tr>
+            <tr><td><code>CORS_ORIGINS</code></td><td><code>http://localhost:5173,http://localhost:3000</code></td><td>Kommagetrennte Liste erlaubter CORS-Origins</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout callout-info">
+        Der Vite Dev-Proxy leitet <code>/api/*</code>-Anfragen an <code>http://localhost:8000</code> weiter. Konfiguration in <code>frontend/vite.config.ts</code>.
+      </div>
+    </section>
+
+    <!-- API: VIDEO -->
+    <section id="api-video" class="section-anchor">
+      <h2>API-Referenz: Video &amp; Jobs</h2>
+
+      <h3>Video hochladen</h3>
+      <div class="table-wrap"><table>
+        <tr><th>Methode</th><th>Pfad</th></tr>
+        <tr><td><span class="method method-post">POST</span></td><td><code>/api/upload</code></td></tr>
+      </table></div>
+      <p><strong>Body:</strong> <code>multipart/form-data</code></p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Feld</th><th>Typ</th><th>Pflicht</th><th>Beschreibung</th></tr></thead>
+        <tbody>
+          <tr><td><code>file</code></td><td>File</td><td>✓</td><td>Videodatei (.mp4 .mov .avi .mkv .webm, max. 4 GB)</td></tr>
+          <tr><td><code>horse_name</code></td><td>string</td><td>–</td><td>Name des Pferds</td></tr>
+          <tr><td><code>gait_label</code></td><td>string</td><td>–</td><td>Tölt | Trab | Schritt | Galopp | Rennpass</td></tr>
+          <tr><td><code>camera_angle</code></td><td>string</td><td>–</td><td>seitlich_links | seitlich_rechts | schräg_vorn | schräg_hinten</td></tr>
+          <tr><td><code>is_training_contribution</code></td><td>bool</td><td>–</td><td>Video für Training freigeben</td></tr>
+          <tr><td><code>training_consent</code></td><td>bool</td><td>–</td><td>DSGVO-Zustimmung für Trainingsdaten</td></tr>
+        </tbody>
+      </table></div>
+      <p><strong>Response:</strong> <code>{ "job_id": "uuid", "filename": "..." }</code></p>
+
+      <h3>Job-Status abfragen</h3>
+      <div class="table-wrap"><table>
+        <tr><th>Methode</th><th>Pfad</th></tr>
+        <tr><td><span class="method method-get">GET</span></td><td><code>/api/status/{job_id}</code></td></tr>
+      </table></div>
+      <pre><code>{
+  "job_id": "uuid",
+  "status": "queued | processing | done | error | expired",
+  "progress": 0-100,
+  "message": "...",
+  "gait": "Tölt | Trab | ..."   // null während Verarbeitung
+}</code></pre>
+
+      <h3>Alle Videos auflisten</h3>
+      <div class="table-wrap"><table>
+        <tr><th>Methode</th><th>Pfad</th><th>Auth</th></tr>
+        <tr><td><span class="method method-get">GET</span></td><td><code>/api/videos</code></td><td>Optional (filtert auf eigene Videos)</td></tr>
+      </table></div>
+
+      <h3>Video herunterladen</h3>
+      <div class="table-wrap"><table>
+        <tr><th>Methode</th><th>Pfad</th></tr>
+        <tr><td><span class="method method-get">GET</span></td><td><code>/api/download/{job_id}</code></td></tr>
+      </table></div>
+
+      <h3>Job löschen</h3>
+      <div class="table-wrap"><table>
+        <tr><th>Methode</th><th>Pfad</th></tr>
+        <tr><td><span class="method method-delete">DELETE</span></td><td><code>/api/job/{job_id}</code></td></tr>
+      </table></div>
+    </section>
+
+    <!-- API: ANALYSIS -->
+    <section id="api-analysis" class="section-anchor">
+      <h2>API-Referenz: Analyse</h2>
+
+      <h3>Takt-Timeline</h3>
+      <div class="table-wrap"><table>
+        <tr><th>Methode</th><th>Pfad</th></tr>
+        <tr><td><span class="method method-get">GET</span></td><td><code>/api/takt-timeline/{job_id}</code></td></tr>
+      </table></div>
+      <pre><code>{
+  "job_id": "uuid",
+  "fps": 25.0,
+  "total_frames": 1500,
+  "tracks": {
+    "VL": [{"frame": 0, "y_norm": 0.91}, ...],
+    "VR": [...],
+    "HL": [...],
+    "HR": [...]
+  }
+}</code></pre>
+
+      <h3>Tölt-Score</h3>
+      <div class="table-wrap"><table>
+        <tr><th>Methode</th><th>Pfad</th></tr>
+        <tr><td><span class="method method-get">GET</span></td><td><code>/api/toelt-score/{job_id}</code></td></tr>
+      </table></div>
+      <pre><code>{
+  "job_id": "uuid",
+  "score": 7.5,
+  "feif_grade": "7.5",
+  "takt_regularity": 0.83,
+  "beat_count": 124,
+  "errors": [
+    {"type": "Trabeinlage", "frame": 42, "severity": "schwer", "description": "..."}
+  ],
+  "disclaimer": "Kein offizieller FEIF-Befund."
+}</code></pre>
+
+      <h3>Rennpass-Score</h3>
+      <div class="table-wrap"><table>
+        <tr><th>Methode</th><th>Pfad</th></tr>
+        <tr><td><span class="method method-get">GET</span></td><td><code>/api/rennpass-score/{job_id}</code></td></tr>
+      </table></div>
+      <pre><code>{
+  "job_id": "uuid",
+  "score": 8.0,
+  "feif_grade": "8.0",
+  "lateral_sync": 0.92,
+  "suspension_detected": true,
+  "stride_count": 31,
+  "errors": [...],
+  "disclaimer": "..."
+}</code></pre>
+
+    </section>
+
+    <!-- API: FRAMES -->
+    <section id="api-frames" class="section-anchor">
+      <h2>API-Referenz: Frames &amp; Keypoints</h2>
+
+      <h3>Frame als JPEG</h3>
+      <div class="table-wrap"><table>
+        <tr><th>Methode</th><th>Pfad</th></tr>
+        <tr><td><span class="method method-get">GET</span></td><td><code>/api/frame/{job_id}/{frame_nr}</code></td></tr>
+      </table></div>
+      <p>Gibt den Frame als <code>image/jpeg</code> zurück. Kann direkt in <code>&lt;img src="..."&gt;</code> verwendet werden.</p>
+
+      <h3>Keypoints für einen Frame</h3>
+      <div class="table-wrap"><table>
+        <tr><th>Methode</th><th>Pfad</th></tr>
+        <tr><td><span class="method method-get">GET</span></td><td><code>/api/keypoints/{job_id}/{frame_nr}</code></td></tr>
+      </table></div>
+      <p>Optionaler Query-Parameter <code>?ms=&lt;millisekunden&gt;</code>: Zeitbasierter Frame-Lookup – gibt Keypoints des Frames zurück, dessen <code>timestamp_ms</code> dem angegebenen Wert am nächsten liegt.</p>
+
+      <h3>Annotation speichern</h3>
+      <div class="table-wrap"><table>
+        <tr><th>Methode</th><th>Pfad</th></tr>
+        <tr><td><span class="method method-post">POST</span></td><td><code>/api/annotations/{job_id}/{frame_nr}</code></td></tr>
+      </table></div>
+      <pre><code>{
+  "keypoints": [
+    { "name": "l_front_hoof", "x": 0.245, "y": 0.918, "confidence": 1.0 },
+    ...
+  ]
+}</code></pre>
+    </section>
+
+    <!-- API: AUTH -->
+    <section id="api-auth" class="section-anchor">
+      <h2>API-Referenz: Authentifizierung</h2>
+
+      <div class="table-wrap"><table>
+        <thead><tr><th>Methode</th><th>Pfad</th><th>Beschreibung</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="method method-post">POST</span></td>
+            <td><code>/api/auth/register</code></td>
+            <td>Registrierung mit E-Mail + Passwort (min. 8 Zeichen)</td>
+          </tr>
+          <tr>
+            <td><span class="method method-post">POST</span></td>
+            <td><code>/api/auth/login</code></td>
+            <td>Login (OAuth2 Password Flow) → JWT-Token</td>
+          </tr>
+          <tr>
+            <td><span class="method method-get">GET</span></td>
+            <td><code>/api/auth/me</code></td>
+            <td>Aktuellen User abrufen (Bearer-Token erforderlich)</td>
+          </tr>
+          <tr>
+            <td><span class="method method-delete">DELETE</span></td>
+            <td><code>/api/auth/account</code></td>
+            <td>Account DSGVO-konform löschen (alle Daten, CASCADE)</td>
+          </tr>
+        </tbody>
+      </table></div>
+
+      <p><strong>Auth-Header:</strong> <code>Authorization: Bearer &lt;token&gt;</code></p>
+      <p>Token-Gültigkeit: 24 Stunden. Das Frontend speichert den Token in <code>localStorage</code> (<code>frontend/src/auth.ts</code>).</p>
+    </section>
+
+    <!-- API: TRAINING -->
+    <section id="api-training" class="section-anchor">
+      <h2>API-Referenz: Training, Lern-Loop &amp; ML</h2>
+
+      <div class="table-wrap"><table>
+        <thead><tr><th>Methode</th><th>Pfad</th><th>Beschreibung</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="method method-get">GET</span></td>
+            <td><code>/api/learning-status</code></td>
+            <td>Lernstatus: Modellversion, Gesamtvideos, Trainingsvideos, Frames, annotierte Frames, Gangart-Verteilung</td>
+          </tr>
+          <tr>
+            <td><span class="method method-get">GET</span></td>
+            <td><code>/api/export/{job_id}</code></td>
+            <td>JSONL-Export aller Keypoints eines Jobs (ein JSON-Objekt pro Zeile: <code>frame_nr</code>, <code>timestamp_ms</code>, <code>keypoints</code>)</td>
+          </tr>
+          <tr>
+            <td><span class="method method-get">GET</span></td>
+            <td><code>/api/export-coco/{job_id}</code></td>
+            <td>COCO ZIP-Export: <code>coco.json</code> + Frames für MMPose Fine-tuning</td>
+          </tr>
+          <tr>
+            <td><span class="method method-delete">DELETE</span></td>
+            <td><code>/api/annotations/{job_id}</code></td>
+            <td>Setzt alle manuellen Annotationen für einen Job zurück (Keypoints bleiben erhalten)</td>
+          </tr>
+          <tr>
+            <td><span class="method method-get">GET</span></td>
+            <td><code>/api/training/export/{job_id}</code></td>
+            <td>COCO-JSON für MMPose-Training herunterladen (einzelnes Video)</td>
+          </tr>
+          <tr>
+            <td><span class="method method-get">GET</span></td>
+            <td><code>/api/training/export-bulk</code></td>
+            <td>Bulk-COCO-ZIP aller Trainingsvideos mit Freigabe (coco.json + Frame-JPEGs)</td>
+          </tr>
+          <tr>
+            <td><span class="method method-get">GET</span></td>
+            <td><code>/api/training/jobs</code></td>
+            <td>Training-Jobs auflisten</td>
+          </tr>
+          <tr>
+            <td><span class="method method-post">POST</span></td>
+            <td><code>/api/training/jobs</code></td>
+            <td>Neuen Training-Job manuell anlegen</td>
+          </tr>
+          <tr>
+            <td><span class="method method-post">POST</span></td>
+            <td><code>/api/training/start</code></td>
+            <td>Fine-tuning starten: Bulk-ZIP aus DB erzeugen, <code>TrainingJob</code> anlegen, Hintergrund-Thread starten → 202</td>
+          </tr>
+          <tr>
+            <td><span class="method method-get">GET</span></td>
+            <td><code>/api/training/status/{job_id}</code></td>
+            <td>Echtzeit-Fortschritt (Epoche, Loss, Status); DB-Fallback nach Container-Neustart</td>
+          </tr>
+          <tr>
+            <td><span class="method method-post">POST</span></td>
+            <td><code>/api/training/activate/{job_id}</code></td>
+            <td>Modell aktivieren: <code>config.yaml</code> schreiben, Singletons invalidieren; liest <code>output_model_path</code> aus DB wenn In-Memory-State fehlt (Rollback)</td>
+          </tr>
+          <tr>
+            <td><span class="method method-post">POST</span></td>
+            <td><code>/api/job/{job_id}/reanalyse</code></td>
+            <td>Gangart-Erkennung auf vorhandenen DB-Keypoints neu ausführen – kein Re-Upload nötig; aktualisiert <code>frames.gait</code> und <code>videos.gait_detected</code></td>
+          </tr>
+        </tbody>
+      </table></div>
+
+      <h3>Learning-Status Response</h3>
+      <pre><code>{
+  "model_version": "v0.2-mmpose",
+  "total_videos": 42,
+  "training_videos": 18,
+  "total_frames": 12540,
+  "annotated_frames": 304,
+  "gait_distribution": {
+    "Tölt": 28,
+    "Trab": 6,
+    "Schritt": 4,
+    "Galopp": 2,
+    "Rennpass": 2
+  }
+}</code></pre>
+    </section>
+
+    <!-- API: SYSTEM -->
+    <section id="api-system" class="section-anchor">
+      <h2>API-Referenz: System</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Methode</th><th>Pfad</th><th>Response</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="method method-get">GET</span></td>
+            <td><code>/api/stats</code></td>
+            <td>Gesamtanzahl Videos, Gangart-Verteilung, Done-Rate</td>
+          </tr>
+          <tr>
+            <td><span class="method method-get">GET</span></td>
+            <td><code>/health</code></td>
+            <td><code>{ "status": "ok", "version": "0.2.0" }</code></td>
+          </tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- BACKEND MODULES -->
+    <section id="backend-modules" class="section-anchor">
+      <h2>Backend-Module</h2>
+
+      <h3><code>video_processor.py</code> – VideoProcessor</h3>
+      <p>Herzstück der Analysepipeline. Läuft in einem <code>threading.Thread</code> (CPU-bound, daher kein asyncio).</p>
+      <pre><code>class VideoProcessor:
+    def process(input_path, output_path, progress_callback, video_db_id=None) → str
+    # Rückgabe: dominant erkannte Gangart als String</code></pre>
+      <p>Intern: <code>_DbWriter</code> sammelt Frames + Keypoints und schreibt sie in Batches à 100 Einträge über psycopg3 COPY.</p>
+
+      <h3><code>gait_detector.py</code> – GaitDetector</h3>
+      <pre><code>class GaitDetector:
+    def update(keypoints: list[tuple[int,int]], bbox: tuple[int,int,int,int], is_side_view: bool = True) → None
+    def detect() → GaitResult  # { name, confidence, note }</code></pre>
+      <p>Arbeitet auf einem gleitenden 30-Frame-Fenster. Analysiert normalisierte Y-Positionen der Fesselgelenke (Horse-10-Indizes: <code>l_front=3, r_front=6, l_hind=14, r_hind=19</code>, Sprunggelenke <code>l_hock=13, r_hock=18</code>). Nur <code>is_side_view=True</code>-Frames fließen in die LAP/DF-Berechnung ein.</p>
+
+      <h3><code>tolt_scorer.py</code> – ToltScorer</h3>
+      <pre><code>class ToltScorer:
+    def score(tracks: dict[str, list[TaktTrackPoint]], fps=25.0) → ToltScore
+    # ToltScore: score, feif_grade, errors, takt_regularity, lap, df, subclassification</code></pre>
+
+      <h3><code>trainer.py</code> – Fine-tuning Pipeline</h3>
+      <pre><code>def run_finetuning(job_id, zip_path, base_checkpoint, base_config, output_model_path) → dict
+def start_training_thread(job_id, zip_path, ..., db_url) → None  # Daemon-Thread-Einstiegspunkt
+
+class HorseKeypointDataset  # liest Bulk-COCO-ZIP, erzeugt 64×64-Gaussian-Heatmaps
+class TrainingState          # job_id, status, epoch, total_epochs, loss, output_model_path</code></pre>
+      <p>Strategie: Backbone eingefroren, nur <code>model.head</code> (~726 Parameter) trainiert. CPU-realistisch in 30–60 Min für ~300 Frames / 50 Epochen. MLflow file-based (<code>/app/mlruns</code>), kein Server nötig. <code>output_model_path</code> wird in <code>dataset_snapshot</code> (JSONB) gespeichert – Rollback nach Neustart ohne erneutes Training möglich.</p>
+
+      <h3><code>pose_factory.py</code> – PoseFactory</h3>
+      <pre><code>def create_estimator(ai_config: AIConfig) → BasePoseEstimator:
+    if ai_config.model_version == "v0.2-mmpose":
+        try: return MMPosePoseEstimator(...)
+        except ImportError: return PropPoseEstimator(...)
+    return PropPoseEstimator(...)</code></pre>
+    </section>
+
+    <!-- AI CONFIG -->
+    <section id="ai-config" class="section-anchor">
+      <h2>AI-Konfiguration wechseln</h2>
+      <p>Modell-Version in <code>backend/config.yaml</code> setzen, dann Backend neu starten:</p>
+      <pre><code># v0.1 – Proportionale Keypoints (Standard, kein zusätzliches Setup)
+ai:
+  model_version: "v0.1"
+  model_path: "yolov8n.pt"
+
+# v0.2 – MMPose hrnet_w32_horse10 (22 Keypoints, mAP ~88%)
+ai:
+  model_version: "v0.2-mmpose"
+  model_path: "yolov8n.pt"
+  pose_model: "hrnet_w32_horse10"
+  pose_config: "/path/to/td-hm_hrnet-w32_8xb64-100e_horse10-256x256.py"
+  device: "cpu"</code></pre>
+
+      <div class="callout callout-warn">
+        <strong>MMPose Setup:</strong> Muss manuell im Backend-Container installiert werden:<br>
+        <code>pip install mmengine mmcv mmdet mmpose</code><br>
+        Außerdem müssen Modell-Checkpoint und Config-Datei vorhanden sein.
+      </div>
+    </section>
+
+    <!-- ADD GAIT -->
+    <section id="add-gait" class="section-anchor">
+      <h2>Neue Gangart hinzufügen</h2>
+      <p>Beispiel: Trab-Scoring hinzufügen.</p>
+      <ol>
+        <li>Neue Datei <code>backend/app/trab_scorer.py</code> nach dem Muster von <code>tolt_scorer.py</code> erstellen</li>
+        <li>In <code>video_processor.py</code>: <code>TrabScorer</code> importieren und in der Pipeline aufrufen</li>
+        <li>In <code>models.py</code>: Pydantic-Response-Schema <code>TrabScoreResponse</code> hinzufügen</li>
+        <li>In <code>main.py</code>: GET-Endpoint <code>/api/trab-score/{job_id}</code> registrieren</li>
+        <li>In <code>frontend/src/api/client.ts</code>: <code>getTrabScore()</code> hinzufügen</li>
+        <li>Frontend-Komponente <code>TrabScoreCard.tsx</code> erstellen</li>
+        <li>i18n-Strings in <code>locales/de.json</code> und <code>en.json</code> ergänzen</li>
+      </ol>
+    </section>
+
+    <!-- FRONTEND STRUCTURE -->
+    <section id="frontend-structure" class="section-anchor">
+      <h2>Frontend-Struktur</h2>
+      <pre><code>frontend/src/
+├── App.tsx            # Root-Komponente, Tab-Navigation, Auth-State
+├── main.tsx           # React-Entry-Point, i18n-Init
+├── auth.ts            # JWT-Lesen/Schreiben aus localStorage
+├── i18n.ts            # i18next-Konfiguration
+├── types.ts           # Alle TypeScript-Interfaces
+├── api/
+│   └── client.ts      # Alle API-Aufrufe, XHR-Upload
+└── components/
+    ├── UploadZone.tsx
+    ├── JobProgress.tsx
+    ├── VideoLibrary.tsx
+    ├── VideoPlayer.tsx
+    ├── TaktTimeline.tsx
+    ├── ToltScoreCard.tsx
+    ├── RennpassScoreCard.tsx
+    ├── AnnotationTool.tsx
+    ├── AuthModal.tsx
+    ├── AccountPage.tsx
+    ├── TrainingUpload.tsx
+    ├── TrainingManager.tsx
+    └── StatsDashboard.tsx</code></pre>
+
+      <h3>State-Management</h3>
+      <p>Kein Redux oder Zustand-Library – State läuft in <code>App.tsx</code> per <code>useState</code>/<code>useEffect</code> und wird als Props nach unten gereicht. Auth-Token in <code>localStorage</code> via <code>auth.ts</code>.</p>
+    </section>
+
+    <!-- FRONTEND API -->
+    <section id="frontend-api" class="section-anchor">
+      <h2>API-Client (<code>client.ts</code>)</h2>
+      <p>Alle Backend-Anfragen laufen durch <code>frontend/src/api/client.ts</code>. Upload verwendet XHR statt <code>fetch</code> für den Fortschrittsbalken:</p>
+      <pre><code>// Beispiel: Video hochladen
+import { uploadVideo } from './api/client'
+
+const { job_id } = await uploadVideo(file, {
+  horse_name: 'Freyja',
+  gait_label: 'Tölt',
+  camera_angle: 'seitlich_links'
+}, (progress) => setProgress(progress))
+
+// Beispiel: Analyse abrufen
+const score = await getToltScore(job_id)</code></pre>
+    </section>
+
+    <!-- I18N -->
+    <section id="i18n" class="section-anchor">
+      <h2>Internationalisierung (i18n)</h2>
+      <p>Locale-Dateien: <code>frontend/src/locales/de.json</code> und <code>en.json</code>. Sprachauswahl über Browser-Präferenz (<code>i18next-browser-languagedetector</code>).</p>
+      <p>Neue Strings hinzufügen:</p>
+      <pre><code>// de.json
+{
+  "trab": {
+    "title": "Trab-Analyse",
+    "diagonalPairs": "Diagonale Paare"
+  }
+}</code></pre>
+      <pre><code>// Verwendung in Komponenten
+import { useTranslation } from 'react-i18next'
+
+const { t } = useTranslation()
+return &lt;h2&gt;{t('trab.title')}&lt;/h2&gt;</code></pre>
+    </section>
+
+    <!-- ML UPGRADE -->
+    <section id="ml-upgrade" class="section-anchor">
+      <h2>Modell upgraden (v0.1 → v0.2)</h2>
+      <ol>
+        <li>MMPose installieren (s. <a href="#ai-config">AI-Konfiguration</a>)</li>
+        <li>Modell-Checkpoint <code>hrnet_w32_horse10.pth</code> herunterladen:
+          <pre><code>mim download mmpose --config td-hm_hrnet-w32_8xb64-100e_horse10-256x256 --dest .</code></pre>
+        </li>
+        <li><code>config.yaml</code> aktualisieren (s. oben)</li>
+        <li>Backend neu starten: <code>docker compose restart backend</code></li>
+        <li>Health-Check: <code>curl localhost:8000/health</code></li>
+      </ol>
+    </section>
+
+    <!-- COCO EXPORT -->
+    <section id="training-export" class="section-anchor">
+      <h2>COCO-Export für Training</h2>
+      <pre><code># Export über API
+curl -o training_data.json \
+     http://localhost:8000/api/training/export/{job_id}
+
+# MMPose Training starten (Beispiel)
+python tools/train.py \
+  configs/body_2d_keypoint/topdown_heatmap/horse10/... \
+  --cfg-options \
+    data.train.ann_file=training_data.json</code></pre>
+
+      <p>Das exportierte JSON folgt dem COCO-Keypoint-Format mit 17 Keypoints (v0.1) bzw. 22 (v0.2). Nur Videos mit gesetztem <code>training_consent=true</code> werden exportiert.</p>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  const anchors = document.querySelectorAll('.section-anchor');
+  const links = document.querySelectorAll('.sidebar a');
+  window.addEventListener('scroll', () => {
+    let current = '';
+    anchors.forEach(a => { if (window.scrollY >= a.offsetTop - 80) current = a.id; });
+    links.forEach(l => {
+      l.classList.toggle('active', l.getAttribute('href') === '#' + current);
+    });
+  });
+</script>
+</body>
+</html>

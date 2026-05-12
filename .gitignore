@@ -1,0 +1,41 @@
+.claude/settings.local.json
+.claude/worktrees/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+dist/
+.pytest_cache/
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# Data
+data/
+uploads/
+outputs/
+temp/
+*.tmp.mp4
+
+# ML models (groß, nicht ins Repo)
+*.pt
+*.pth
+*.onnx
+
+# Env
+.env
+.env.*
+
+# Claude Code (persönliche Einstellungen, nicht für öffentliche Repos)
+.claude/
+
+# IDE
+.vscode/
+.idea/
+
+# Debug-Skripte
+backend/app/debug_tracking.py

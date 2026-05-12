@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Changelog – Töltonaut</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav class="topnav">
+  <span class="brand">Tölt<span>onaut</span> · Docs</span>
+  <nav>
+    <a href="index.html">Übersicht</a>
+    <a href="architecture.html">Architektur</a>
+    <a href="algorithm.html">Algorithmik</a>
+    <a href="developer.html">Entwickler</a>
+    <a href="product.html">Produkt</a>
+    <a href="user-manual.html">Handbuch</a>
+    <a href="changelog.html" class="active">Changelog</a>
+  </nav>
+</nav>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Releases</div>
+      <a href="#unreleased">Unveröffentlicht</a>
+      <a href="#v1-0">v1.0 – Lernfähig</a>
+      <a href="#v0-2x">v0.2.x – 2026-05-02</a>
+      <a href="#v0-2">v0.2 – Tölt-Analyse</a>
+      <a href="#v0-1">v0.1 – MVP</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Geplant</div>
+      <a href="#v0-3">v0.3 – Vollanalyse</a>
+      <a href="#sprint-g">Sprint G – Analyse-Präzision</a>
+    </div>
+  </aside>
+
+  <main class="content">
+    <div class="page-header">
+      <span class="page-badge badge-log">Changelog</span>
+      <h1>Changelog
+        <span class="subtitle">Alle Änderungen, geordnet nach Versionen</span>
+      </h1>
+    </div>
+
+    <p>Das Format orientiert sich an <a href="https://keepachangelog.com" target="_blank">Keep a Changelog</a>. Versionen folgen <a href="https://semver.org" target="_blank">Semantic Versioning</a>.</p>
+
+    <div class="timeline">
+
+      <!-- UNRELEASED -->
+      <div id="unreleased" class="timeline-item section-anchor">
+        <div class="timeline-version">[Unveröffentlicht] <span class="version-badge v02">In Arbeit</span></div>
+        <div class="timeline-date">Hauptbranch</div>
+
+        <h4 class="text-green">Sprint L – Training-Tab in Admin verschoben</h4>
+        <ul>
+          <li><strong>L1 – Training-Tab entfernt:</strong> Der separate „Training"-Button in der Header-Navigation wurde entfernt. Der <code>'training'</code>-Typ aus dem <code>Screen</code>-Union sowie der zugehörige Screen-Block (<code>LernStatus</code> + <code>TrainingManager</code>) wurden aus <code>App.tsx</code> ausgebaut.</li>
+          <li><strong>L2 – Training in Admin-Bereich integriert:</strong> <code>LernStatus</code> und <code>TrainingManager</code> werden nun am Anfang des <code>AdminPanel</code> eingebunden, getrennt vom Datenbank-Bereich durch einen Divider. Training starten und Rollback durchführen ist weiterhin über den Admin-Tab möglich.</li>
+        </ul>
+
+        <h4 class="text-green">Sprint K – Gangart-Multiselect &amp; UI-Cleanup</h4>
+        <ul>
+          <li><strong>K1 – Gangart-Multiselect in UploadZone:</strong> Das Gangart-Dropdown in <code>UploadZone.tsx</code> wurde durch eine Checkbox-Gruppe mit allen 5 Gangarten (Tölt, Schritt, Trab, Galopp, Rennpass) ersetzt. State <code>gaitLabels: string[]</code>, Submit sendet kommagetrennte Werte (<code>gait_label: "Tölt,Trab"</code>). Aktive Pills in <code>bg-islandblau/30 border-gletscherblau/60</code>. Wenn Lernfreigabe aktiv und keine Gangart gewählt, wird der Submit blockiert und ein Hinweis angezeigt.</li>
+          <li><strong>K2 – TrainingUpload aus TrainingManager entfernt:</strong> Der Upload-Bereich (inkl. <code>showUpload</code>-State, <code>handleJobStarted</code>, <code>TrainingUpload</code>-Import und JSX-Sektion) wurde aus <code>TrainingManager.tsx</code> ausgebaut. <code>TrainingUpload.tsx</code> bleibt erhalten. Der reguläre Upload-Flow über <code>UploadZone</code> mit Lernfreigabe-Checkbox ersetzt den separaten Beitrags-Upload.</li>
+          <li><strong>K3 – VideoLibrary Gait-Labels als Pills:</strong> In <code>VideoLibrary.tsx</code> werden kommagetrennte <code>gait_label</code>-Werte nun in einzelne Pills aufgesplittet und nebeneinander angezeigt.</li>
+          <li><strong>K4 – Video-Detail Gait-Labels als Pills:</strong> In <code>App.tsx</code> (Video-Detail-Screen) wird <code>selectedVideo.gait_label</code> ebenfalls per Split+Map als mehrere Pills dargestellt.</li>
+          <li><strong>i18n:</strong> Neue Keys <code>upload.gaitRequired</code> und <code>gait.toelt / .schritt / .trab / .galopp / .rennpass</code> in <code>de.json</code> und <code>en.json</code> ergänzt.</li>
+        </ul>
+      </div>
+
+      <!-- v1.0 -->
+      <div id="v1-0" class="timeline-item section-anchor">
+        <div class="timeline-version">v1.0.0 – Lernfähig <span class="version-badge v10">Veröffentlicht</span></div>
+        <div class="timeline-date">2026-05-06</div>
+
+        <h4 class="text-green">Sprint I – WCAG 2.1 AA Barrierefreiheit</h4>
+        <ul>
+          <li><strong>Kontrast-Audit (I1):</strong> Neue Farbe <code>flaggenrot-text: #FF6B81</code> in <code>tailwind.config.js</code> und <code>index.css</code> als WCAG-konformer Fehlertext auf dunklem Hintergrund (Ratio ≈ 4,3:1, knapp unter 4,5:1 – deutlich besser als <code>#C8102E</code> mit 1,8:1). Alle Fehlertext-Elemente in <code>JobProgress</code>, <code>AuthModal</code>, <code>MetadataEditModal</code>, <code>UploadZone</code>, <code>TrainingManager</code> und <code>App.tsx</code> (<code>DetailErrorBoundary</code>) von <code>text-flaggenrot</code> auf <code>text-flaggenrot-text</code> umgestellt. Hintergrundflächen (<code>bg-flaggenrot/…</code>) bleiben unverändert.</li>
+          <li><strong>Focus-Styles (I2):</strong> <code>:focus-visible</code>-Regel mit 2 px <code>#A8D8EA</code>-Outline in <code>index.css</code> ergänzt. Maus-Klick-Fokus (<code>:focus:not(:focus-visible)</code>) ausgeblendet – kein visuelles Rauschen, aber vollständige Tastatur-Sichtbarkeit.</li>
+          <li><strong>Skip-Link (I2):</strong> Unsichtbarer „Zum Hauptinhalt springen"-Link als erstes DOM-Element in <code>App.tsx</code> eingefügt; wird bei Tastatur-Fokus sichtbar (Klasse <code>.skip-link</code> + <code>:focus-visible</code> in <code>index.css</code>). Ziel: <code>id="main-content"</code> auf dem <code>&lt;main&gt;</code>-Element.</li>
+          <li><strong>Fokus-Trap in Modals (I2):</strong> <code>AuthModal</code> und <code>MetadataEditModal</code> setzen beim Öffnen den Fokus auf das erste Input-Element (<code>useEffect</code> + <code>useRef</code>). Escape-Key-Handler in beiden Modals implementiert.</li>
+          <li><strong>ARIA-Labels &amp; Live-Regions (I3):</strong>
+            <ul>
+              <li><code>JobProgress</code>: Fortschrittsbalken erhält <code>role="progressbar"</code>, <code>aria-valuenow</code>, <code>aria-valuemin</code>, <code>aria-valuemax</code> und <code>aria-label</code>. Status-Text in <code>aria-live="polite"</code>-Container.</li>
+              <li><code>TaktTimeline</code>: Äußerer Canvas-Container mit <code>role="img"</code> und <code>aria-label="Takt-Timeline: Fußungssequenz der vier Beine"</code>.</li>
+              <li><code>AuthModal</code> und <code>MetadataEditModal</code>: <code>role="dialog"</code>, <code>aria-modal="true"</code>, <code>aria-labelledby</code> auf Titel-ID.</li>
+              <li>Alle Fehler-Container: <code>role="alert"</code> (löst automatisch <code>aria-live="assertive"</code> aus).</li>
+              <li><code>VideoActions</code>: CSV-Download-Link mit <code>aria-label="Analyse-Metriken als CSV herunterladen"</code>.</li>
+              <li><code>AnnotationTool</code>: Beide Dialoge (<code>AnnotationIntro</code> und Haupt-Tool) mit <code>role="dialog"</code>, <code>aria-modal="true"</code>, <code>aria-labelledby</code>. Zoom-Buttons (<code>+</code>, <code>%</code>, <code>−</code>) und Frame-Navigations-Buttons (<code>←</code>, <code>→</code>) mit <code>aria-label</code> ergänzt.</li>
+            </ul>
+          </li>
+          <li><strong>Neue Übersetzungsschlüssel:</strong> <code>job.progressLabel</code> und <code>timeline.ariaLabel</code> in <code>de.json</code> und <code>en.json</code> ergänzt.</li>
+        </ul>
+
+        <h4 class="text-green">Sprint H – i18n vollständig (Deutsch + Englisch)</h4>
+        <ul>
+          <li><strong>Vollständige Internationalisierung (H1):</strong> Alle UI-sichtbaren Strings in 19 Komponenten (UploadZone, VideoLibrary, ToltScoreCard, RennpassScoreCard, TaktTimeline, TrainingManager, AnnotationTool, AuthModal, AccountPage, VideoPlayer, VideoActions, JobProgress, MetadataEditModal, LernStatus, StatsDashboard, GaitSegmentBar, RecordingGuide, TrainingUpload, AdminPanel) und App.tsx wurden mit <code>useTranslation()</code> und <code>t('key')</code> versehen – kein hartkodierter String mehr.</li>
+          <li><strong>Übersetzungsdateien (H2):</strong> <code>de.json</code> und <code>en.json</code> vollständig befüllt. Fachbegriffe (Tölt, Takt, LAP, Duty Factor, FEIF, MMPose) bleiben in beiden Sprachen unverändert. Einzelner Namespace <code>translation</code> mit flachen, komponentenbasierten Schlüsseln (z.&nbsp;B. <code>job.detectedGait</code>, <code>annotation.frameStep</code>).</li>
+          <li><strong>LanguageSwitcher-Komponente (H3):</strong> Neue Komponente <code>LanguageSwitcher.tsx</code> mit DE/EN-Schaltflächen; aktive Sprache in Gletscherblau hervorgehoben. Im App-Header rechts neben dem Admin-Button integriert. Ruft <code>i18n.changeLanguage()</code> auf.</li>
+          <li><strong>Bugfix AuthModal:</strong> Variablenkollision des <code>map</code>-Parameters <code>t</code> mit dem <code>useTranslation</code>-Hook behoben – Parameter in <code>tabKey</code> umbenannt.</li>
+        </ul>
+
+        <h4 class="text-green">Sprint J1 – 1-Klick-Training</h4>
+        <ul>
+          <li><strong>Kombinierter Trainings-Workflow in <code>TrainingManager.tsx</code>:</strong> Neuer prominenter Primär-Button „Mit freigegebenen Videos trainieren" ersetzt den zuvor getrennten Zwei-Schritt-Ablauf (Export → Training-Start). Ein einziger Klick startet das Fine-tuning direkt.</li>
+          <li><strong>Kein separater Export-Schritt nötig:</strong> <code>POST /api/training/start</code> liest Videos mit <code>training_consent=True</code> direkt aus der DB und baut das COCO-ZIP intern. Der Button ruft daher ausschließlich <code>startTraining()</code> auf – kein vorheriger <code>/api/training/export-bulk</code>-Call im Frontend.</li>
+          <li><strong>Mehrstufige Status-Anzeige:</strong> Der Button-Text wechselt dynamisch durch die Phasen <code>[1/2] Starte Training…</code> → <code>[2/2] Training läuft… X%</code> → abgeschlossen. Fortschrittsbalken erscheint direkt unter dem Button während das Training läuft.</li>
+          <li><strong>Video-Zähler:</strong> Unter dem Button wird „X Videos mit Lernfreigabe verfügbar" angezeigt; Button ist deaktiviert wenn keine Videos vorhanden oder bereits ein Training aktiv ist.</li>
+          <li><strong>Erweiterte Optionen (<code>&lt;details&gt;</code>-Akkordeon):</strong> Die bisherigen Buttons „Fine-tuning starten" und „Trainingspaket exportieren" wurden in einen aufklappbaren „Erweiterte Optionen"-Bereich verschoben – kein Breaking Change, alle Funktionen bleiben erhalten.</li>
+        </ul>
+
+        <h4 class="text-green">Sprint G1 – Bodenebene als Foot-On-Referenz</h4>
+        <ul>
+          <li><strong>Dynamische Bodenlinie (<code>_ground_buf_*</code> in <code>gait_detector.py</code>):</strong> Pro Bein (LF/RF/LH/RH) wird ein Rolling-Maximum-Buffer (<code>deque</code>, ~2 s Fenster = <code>effective_fps × 2</code>) über bbox-relative Fesselgelenk-Y-Werte geführt. Das Maximum entspricht der tiefsten Huf-Position der letzten 2 Sekunden und dient als lokale Bodenlinie. Robust gegen Kameraschwenk und wechselnde Tier-Positionen, weil alle Koordinaten relativ zur Pferd-Bbox normiert sind (0 = oben, 1 = Boden).</li>
+          <li><strong>Proximity-basierte Foot-On-Erkennung (<code>_find_foot_on_events()</code>):</strong> Ersetzt die bisherige <code>_find_peaks()</code>-Methode für den G1-Pfad. Foot-On tritt auf, wenn <code>y_rel ≥ ground_y − 0.05</code> für mindestens 3 aufeinanderfolgende Frames (<code>MIN_STANCE_FRAMES</code>) – verhindert Rausch-Ereignisse. Foot-Off sobald Abstand zur Bodenlinie die Schwelle überschreitet. Rückgabe: Frame-Indizes der Standphasen-Starts.</li>
+          <li><strong>Duty-Factor-Berechnung verbessert:</strong> Im G1-Pfad wird Standphase direkt als <code>y_rel ≥ ground_y − threshold</code> definiert statt über den 95%-Schwellenwert des Trajektorie-Maximums. Sprunggelenk-Y (B3) nutzt weiterhin den alten Schwellenwert als Fallback (kein separater Ground-Buffer für Hocks).</li>
+          <li><strong>Fallback auf Peak-Methode:</strong> Wenn keine Bodenlinie ermittelt werden kann (leere Buffer oder Bodenlinie &lt; 0.3 relativ), greift der bisherige <code>_find_peaks()</code>-Algorithmus. Kein Breaking Change in <code>update()</code>- oder <code>get_result()</code>-Signatur.</li>
+        </ul>
+
+        <h4 class="text-green">Sprint G4 – Geschwindigkeitsband und Plausibilitätscheck in Score-Cards</h4>
+        <ul>
+          <li><strong>Geschwindigkeitsband in <code>ToltScoreCard</code> und <code>RennpassScoreCard</code>:</strong> Wenn <code>speed_ms</code> aus der Video-Bibliothek verfügbar ist (Stockmaß wurde beim Upload angegeben), erscheint im aufgeklappten Bereich beider Score-Cards eine neue Zeile „Geschwindigkeit" mit dem Wert in m/s. Der Wert ist farbcodiert nach Plausibilität: Nordlicht-Grün bei Tölt ≥ 6,5 m/s / Rennpass ≥ 8,0 m/s, Geysir-Weiß im mittleren Bereich, Flaggenrot bei zu niedrigen Werten.</li>
+          <li><strong>Plausibilitäts-Hinweise (gelb):</strong> Tölt &lt; 2,0 m/s → „⚠ Sehr langsam – eher Schritt?"; Pass-Einlage erkannt, aber Tempo &lt; 5,0 m/s → kontextbezogener Hinweis; Rennpass &lt; 5,0 m/s → „⚠ Zu langsam für Rennpass".</li>
+          <li><strong>Kein Placeholder bei fehlendem Stockmaß:</strong> Ist <code>speed_ms === null</code>, wird der gesamte Geschwindigkeitsbereich ausgeblendet – kein „–" oder leerer Slot.</li>
+          <li><strong>Backend: <code>VideoListItem</code> um <code>speed_ms</code> erweitert:</strong> <code>GET /api/videos</code> liefert jetzt <code>speed_ms: float | null</code> pro Video-Eintrag; <code>VideoEntry</code> in <code>types.ts</code> entsprechend aktualisiert.</li>
+          <li><strong>Prop-Weitergabe in <code>App.tsx</code>:</strong> Beide Score-Cards erhalten <code>speedMs={selectedVideo.speed_ms ?? null}</code> – kein zusätzlicher API-Call nötig.</li>
+        </ul>
+
+        <h4 class="text-green">Sprint G3 – Geschwindigkeitsschätzung</h4>
+        <ul>
+          <li><strong>Bbox-normierte Geschwindigkeitsschätzung (<code>_compute_speed()</code> in <code>gait_detector.py</code>):</strong> Berechnet Pferd-Geschwindigkeit in m/s aus der horizontalen Bbox-Mittelpunktbewegung, normiert auf die Bbox-Höhe: <code>speed_ms = median(|Δx_px| / bbox_height_px) × stockmass_m × effective_fps</code>. Distanz-Invarianz: da Δx und bbox_height_px beide mit 1/Kameraabstand skalieren, kürzt sich der Abstand raus – kein Kalibrierungsschritt nötig.</li>
+          <li><strong>Rolling-Buffer <code>_speed_dx_norm</code> (~1 s Fenster):</strong> Pro Seitenansicht-Frame mit stabiler Bbox (h &gt; 10 px) wird ein normierter |Δx|/h-Wert in einen <code>deque</code> der Größe <code>effective_fps</code> geschrieben. Der Median dieses Fensters reduziert Ausreißer durch abrupte Kamerabewegungen.</li>
+          <li><strong><code>GaitDetector.__init__</code> erweitert:</strong> Neuer optionaler Parameter <code>stockmass_cm: int | None = None</code>. Intern als <code>stockmass_m</code> (Meter) gespeichert. Kein Breaking Change: fehlender Wert → <code>speed_ms = None</code>.</li>
+          <li><strong><code>GaitResult.speed_ms: float | None</code>:</strong> Neues Feld im Analyse-Ergebnis-Dataclass. Wird von <code>detect()</code> über <code>_detect_gait()</code> + <code>_compute_speed()</code> befüllt.</li>
+          <li><strong>API-Response erweitert:</strong> <code>JobState</code> und <code>JobStatus</code> in <code>models.py</code> enthalten jetzt <code>speed_ms: float | None</code>. <code>GET /api/status/{job_id}</code> liefert das Feld bei gesetztem Stockmaß nach Verarbeitungsende.</li>
+          <li><strong>Pipeline-Integration:</strong> <code>VideoProcessor.process()</code> nimmt neues optionales Argument <code>stockmass_cm</code> und gibt jetzt <code>(detected_gait, detected_angle, speed_ms)</code> zurück. <code>_run_processing()</code> in <code>main.py</code> liest <code>stockmass_cm</code> aus dem Job-State und schreibt <code>speed_ms</code> nach Verarbeitung zurück.</li>
+        </ul>
+
+        <h4 class="text-green">Sprint G2 – Stockmaß-Eingabe</h4>
+        <ul>
+          <li><strong>DB-Feld <code>stockmass_cm</code> (nullable INTEGER) in <code>videos</code>:</strong> Migration via <code>ALTER TABLE … ADD COLUMN IF NOT EXISTS</code> in <code>database.py</code> – idempotent, kein Alembic benötigt. SQLAlchemy-Modell in <code>db_models.py</code> aktualisiert.</li>
+          <li><strong>Upload-API erweitert:</strong> <code>POST /api/upload</code> akzeptiert neues optionales Form-Feld <code>stockmass_cm: int | None</code> (Wertebereich 80–200 cm, Validierung im Endpoint). Wert wird in der DB gespeichert und in <code>GET /api/status/{job_id}</code>-Response zurückgeliefert.</li>
+          <li><strong>Frontend Upload-UI:</strong> Optionales Zahlenfeld „Stockmaß (cm)" mit Hinweistext „Optional – für Geschwindigkeitsschätzung" im UploadZone-Formular ergänzt. Typ <code>number</code>, min=80, max=200, Platzhalter „z. B. 142". Wert wird mit dem Upload-Formular als FormData gesendet.</li>
+          <li><strong>Typen aktualisiert:</strong> <code>JobState</code>, <code>VideoEntry</code> in <code>types.ts</code> und <code>UploadMeta</code> in <code>client.ts</code> um <code>stockmass_cm</code> ergänzt.</li>
+        </ul>
+
+        <h4 class="text-green">Sprint A-Qualität – Analyse-Pipeline-Verbesserungen</h4>
+        <ul>
+          <li><strong>Keypoint-Smoothing:</strong> Gleitender Mittelwert (window=5, <code>np.convolve</code>) auf Fesselgelenk-Trajektorien vor LAP/DF-Berechnung – reduziert Rauschen durch Pose-Estimation-Jitter.</li>
+          <li><strong>Konfidenz-Filter:</strong> Fesselgelenk-Keypoints mit Konfidenz &lt; 0,3 werden verworfen und fließen nicht in die Traj­ektorien ein (<code>_kp_y()</code>-Helper in <code>gait_detector.py</code>).</li>
+          <li><strong>Upload-TTL:</strong> Original-Upload-Datei standardmäßig sofort gelöscht; über <code>config.yaml → upload.ttl_hours</code> oder Umgebungsvariable <code>UPLOAD_TTL_HOURS</code> konfigurierbar. Bei TTL &gt; 0 bereinigt der Cleanup-Thread Upload-Dateien nach Ablauf der Frist.</li>
+        </ul>
+
+        <h4 class="text-green">Sprint F – Rollback-UI + Neuanalyse</h4>
+        <ul>
+          <li><strong>Rollback-UI im TrainingManager:</strong> Das aktuell aktive Modell wird mit einem „AKTIV"-Badge hervorgehoben (Abgleich <code>job.model_version</code> vs. <code>learning-status.model_version</code>). Der Aktivieren-Button auf älteren Jobs heißt „Rollback auf dieses Modell" – ein Klick stellt das Modell ohne Neustart wieder her. Für das aktive Modell erscheint stattdessen der Hinweis „Aktuell aktiv".</li>
+          <li><strong>POST /api/job/{job_id}/reanalyse:</strong> Neuer Endpunkt, der Gangart-Erkennung auf den bereits in der DB gespeicherten Keypoints erneut ausführt. Nützlich nach Aktivierung eines verbesserten Modells oder nach Algorithmusänderungen – kein Re-Upload nötig (Original-Datei wurde nach Verarbeitung gelöscht). Konvertiert normierte Named-Keypoints zurück in indizierte Pixel-Tupel, ruft <code>GaitDetector</code> mit Horse-10-FETLOCK_INDICES auf und schreibt aktualisierte <code>frames.gait</code> und <code>videos.gait_detected</code> zurück. Debounce (10 Frames) bleibt aktiv.</li>
+          <li><strong>„Neu analysieren"-Button in VideoLibrary:</strong> Erscheint bei allen fertigen Videos; zeigt Lade- und Erfolgs-Feedback und aktualisiert die Liste nach Abschluss.</li>
+        </ul>
+
+        <h4 class="text-green">Sprint E – Bugfixes Fine-tuning Pipeline</h4>
+        <ul>
+          <li><strong>requirements.txt: pyyaml + mlflow ergänzt:</strong> Beide Pakete fehlten im Container-Image und ließen <code>trainer.py</code> (MLflow-Import) sowie <code>activate_model</code> (yaml.safe_load) abstürzen. <code>pyyaml&gt;=6.0</code> und <code>mlflow&gt;=2.0</code> hinzugefügt.</li>
+          <li><strong>activate_model: DB-Fallback nach Neustart:</strong> Bisher schlug <code>POST /api/training/activate/{id}</code> nach Container-Neustart mit 409 fehl, weil <code>_states</code> (In-Memory) leer war. Jetzt wird <code>output_model_path</code> beim Trainingsstart in <code>dataset_snapshot</code> gespeichert und bei leerem State aus der DB gelesen – Rollback ohne Neustart bleibt erhalten.</li>
+          <li><strong>training/status: DB-Fallback für abgeschlossene Jobs:</strong> <code>GET /api/training/status/{id}</code> lieferte nach Neustart 404. Endpunkt fällt jetzt auf den DB-Eintrag zurück (Status aus Metriken abgeleitet: <em>done</em> wenn <code>metrics</code> befüllt, sonst <em>queued</em>) – Frontend-Polling terminiert sauber.</li>
+        </ul>
+
+        <h4 class="text-green">Behoben</h4>
+        <ul>
+          <li><strong>MMPose AssertionError – leere Fehlermeldung im UI:</strong> <code>flip_test=True</code> → <code>flip_test=False</code> in der Horse-10-Modell-Konfiguration. Der Fehler verhinderte jede Videoanalyse und zeigte nur „Fehler: " ohne weiteren Hinweis.</li>
+        </ul>
+
+        <h4 class="text-green">Neu – Visualisierung</h4>
+        <ul>
+          <li><strong>iOS-Sticker-Kontureffekt (<code>draw_subject_outline()</code>):</strong> <code>yolov8n-seg.pt</code> statt <code>yolov8n.pt</code> für Pixel-Segmentierungsmasken. Pferd + Reiter (Klassen 17 + 0) werden erkannt; Masken kombiniert. Zweischichtiger Gletscherblau-Glow (10 px + 30 px) und morphologischer Gradientrand erzeugen einen hellen Sticker-Rand um das Subjekt.</li>
+          <li><strong>Kleine Gelenkpunkte im Video (<code>draw_keypoints_small()</code>):</strong> Skelett-Linien (1 px) und Gelenkpunkte (r = 3 px) werden bei 60 % Alpha auf jeden verarbeiteten Frame gezeichnet. Bewusst kleiner als die Darstellung im Browser-Annotationstool.</li>
+        </ul>
+
+        <h4 class="text-green">Neu – Analyse</h4>
+        <ul>
+          <li><strong>Focus-Lock (<code>locked_cx</code>/<code>locked_cy</code> in <code>video_processor.py</code>):</strong> Das erste erkannte Fokuspferd wird per Zentrum-Distanz über alle Frames verfolgt. Verhindert unerwünschtes Wechseln des Fokuspferds bei ungünstigem Kamerawinkel. Algorithmus und Annotations-UI referenzieren damit konsistent dasselbe Pferd.</li>
+          <li><strong>Gangart-Debounce (<code>MIN_HOLD=10</code> in <code>video_processor.py</code>):</strong> Gangartbezeichnung wechselt erst nach 10 stabilen Detektionen in Folge (~1 s bei 10 fps). Eliminiert Flackern zwischen Gangartphasen. Gesteuert über <code>pending_gait</code>/<code>pending_count</code>.</li>
+        </ul>
+
+        <h4 class="text-green">Sprint D – Fine-tuning Pipeline + Hock-DF + Fehlerbalken-Seek</h4>
+        <ul>
+          <li><strong>Fine-tuning Backend (<code>trainer.py</code>):</strong> <code>HorseKeypointDataset</code> liest Bulk-COCO-ZIP und erzeugt 64×64-Gaussian-Heatmaps. <code>_freeze_backbone()</code> friert alle Schichten ein, nur <code>model.head</code> (~726 Parameter) wird trainiert – auf CPU in 30–60 Min für 300 Frames realistisch. Early Stopping (5 Epochen Geduld ab Ep. 10), optionales MLflow-Tracking (file-basiert, kein Server), psycopg3-Schreibzurück in DB.</li>
+          <li><strong>API-Endpunkte:</strong> <code>POST /api/training/start</code> generiert Bulk-COCO-ZIP aus DB, startet Daemon-Thread, legt <code>TrainingJob</code> an. <code>GET /api/training/status/{job_id}</code> liefert Echtzeit-Fortschritt (Epoche, Loss, Status). <code>POST /api/training/activate/{job_id}</code> schreibt <code>config.yaml</code> und invalidiert AIConfig- und PoseEstimator-Singletons.</li>
+          <li><strong>TrainingManager UI:</strong> „Fine-tuning starten"-Button, Fortschrittsbalken (Epoche/Loss/%), Fehlermeldung bei Fehler, „Modell aktivieren"-Button pro Job (erscheint sobald Metriken vorhanden).</li>
+          <li><strong>C3-Bonus – Fehlerbalken-Seek:</strong> Klick auf die farbigen Fehlerbalken (obere 8px) in der TaktTimeline springt zum nächstliegenden Fehler-Frame statt zur allgemeinen Timeline-Position.</li>
+          <li><strong>B3 Phase 2 – Sprunggelenk-DF:</strong> <code>GaitDetector</code> speichert Hock-Y-Trajektorien und bezieht sie in die DF-Berechnung ein (bis zu 6 Quellen statt 4 für präzisere Standphasen-Erkennung).</li>
+        </ul>
+
+        <h4 class="text-green">Sprint C – Tölt-Kernfeatures komplett</h4>
+        <ul>
+          <li><strong>C1 – LAP/DF/Subklassifikation im Backend:</strong> <code>ToltScorer.score()</code> berechnet jetzt Lateral Advanced Placement (LAP) aus den LH→VL-Landungssequenzen, Duty Factor (DF) als mittleren Standphasenanteil und die FEIF-Tölt-Subklassifikation (<em>passig</em> &lt; 22%, <em>korrekt</em> 22–28%, <em>trabig</em> &gt; 28%). Die Werte werden in <code>ToltScoreResponse</code> exponiert und in <code>ToltScoreCard</code> als LAP/DF/Subtyp-Grid angezeigt (Grid war bereits implementiert, fehlte nur Backend-Berechnung).</li>
+          <li><strong>C2 – FPS-Synchronisation:</strong> VideoPlayer nutzt die echte fps aus der TaktTimeline-API statt ESTIMATED_FPS=25. <code>TaktTimeline</code> gibt fps per <code>onFpsDetected</code>-Callback nach oben; <code>App.tsx</code> reicht sie als <code>fps</code>-Prop an den VideoPlayer weiter. <code>seekToMs</code> ist jetzt <code>{ms, seq}</code> – wiederholte Seeks auf denselben Frame werden korrekt ausgelöst.</li>
+          <li><strong>C3 – Takt-Timeline als Seek-Control:</strong> Klick auf die TaktTimeline springt den VideoPlayer zum angeklickten Zeitpunkt. Cursor wechselt auf <code>pointer</code> wenn <code>onSeek</code> verfügbar ist.</li>
+          <li><strong>C4 – Frame-Direktnavigation:</strong> VideoPlayer zeigt die aktuelle Frame-Nummer neben der Zeitanzeige. Klick öffnet ein Eingabefeld; Enter/Blur springt direkt zum gewünschten Frame.</li>
+          <li><strong>C5 – Disclaimer sichtbar:</strong> <code>ToltScoreCard</code> zeigt den Experimentell-Hinweis (kein FEIF-Befund) am Ende des aufgeklappten Bereichs.</li>
+        </ul>
+
+        <h4 class="text-green">Sprint B – Konfidenz, Sprunggelenke, Bulk-Export</h4>
+        <ul>
+          <li><strong>B1 – Echte MMPose-Konfidenz:</strong> <code>estimate()</code> gibt jetzt <code>(x, y, confidence)</code> zurück statt <code>(x, y)</code>. MMPose liefert reale <code>keypoint_scores</code>; PropPose nutzt <code>1.0</code> als Fallback, manuell korrigierte KP <code>2.0</code>. Keypoint-Konfidenz wird in der DB gespeichert.</li>
+          <li><strong>B1 – Unsichere Keypoints im AnnotationTool:</strong> Keypoints mit Konfidenz &lt; 0,5 werden mit gestricheltem rotem Ring, gedimmter Farbe und Prozent-Badge hervorgehoben – Hinweis zur manuellen Korrektur.</li>
+          <li><strong>B2 – Bulk COCO Training Export (<code>GET /api/training/export-bulk</code>):</strong> Exportiert alle Videos mit <code>training_consent=True</code> als ein kombiniertes COCO-JSON mit global eindeutigen IDs, extrahierten Frames in Job-Unterordnern und Gangart-Metadaten in <code>categories[].metadata</code>. Direkt downloadbar aus dem Training-Screen.</li>
+          <li><strong>B3 – Horse-10-Sprunggelenk-Indizes im GaitDetector:</strong> Hock-Winkel und Carpus-Winkel nutzen jetzt die korrekten Horse-10-Indizes (<code>l_hock=13</code>, <code>r_hock=18</code>, <code>l_carpus=2</code>, <code>r_carpus=5</code>) statt der alten v0.1-PropPose-Indizes. <code>_angle()</code> ist 3-Tupel-sicher (<code>[:2]</code>). Croup-Index passt sich automatisch an Horse-10 (21) vs. v0.1 (30) an.</li>
+        </ul>
+      </div>
+
+      <!-- v0.2.x -->
+      <div id="v0-2x" class="timeline-item section-anchor">
+        <div class="timeline-version">v0.2.x – Audit-Fixes &amp; Lern-Loop <span class="version-badge v02">Implementiert</span></div>
+        <div class="timeline-date">2026-05-02</div>
+
+        <h4 class="text-green">Neu – Core Features</h4>
+        <ul>
+          <li><strong>MMPose v0.2 aktiviert:</strong> HRNet-W32 Horse-10 mit 22 echten ML-Keypoints (mAP ~88%) ersetzt proportionale Bbox-Schätzung</li>
+          <li><strong>Skelett-Overlay im VideoPlayer:</strong> 21 Knochenverbindungen, farblich nach Körperzone (Kopf/Hals, Rücken, Vorderbeine, Hinterbeine)</li>
+          <li><strong>Skelett-Overlay im AnnotationTool:</strong> Echtzeit-Vorschau der Verbindungen beim Keypoint-Editieren</li>
+          <li><strong>Zoom/Pan im AnnotationTool:</strong> Mausrad zum Zoomen (zentriert auf Cursor), Drag auf leerer Fläche zum Schwenken, +/−/%-Buttons im Header, automatisches Einpassen beim Frame-Wechsel</li>
+          <li><strong>Unsaved-Changes-Dialog im AnnotationTool:</strong> Beim Schließen mit ungespeicherten Änderungen erscheint eine Sicherheitsabfrage</li>
+          <li><strong>LernStatus-Komponente:</strong> Statistik-Kacheln im Training-Screen (Modellversion, Videos gesamt, Trainingsvideos, Frames, annotierte Frames, Gangart-Verteilung)</li>
+          <li><strong>Export-Link in VideoLibrary:</strong> JSONL-Download aller Keypoints direkt per Klick aus der Videokarte</li>
+          <li><strong>Reset-Button in VideoLibrary:</strong> Manuelle Annotationen für ein Video zurücksetzen (mit Bestätigungsdialog)</li>
+        </ul>
+
+        <h4 class="text-green">Neu – API-Endpunkte</h4>
+        <ul>
+          <li><code>GET /api/learning-status</code> → <code>LearningStatus</code>: Modellversion, Anzahl Videos/Frames/Annotierungen, Gangart-Verteilung</li>
+          <li><code>GET /api/export/{job_id}</code> → JSONL-Export aller Keypoints eines Jobs (zeilenweise JSON)</li>
+          <li><code>GET /api/export-coco/{job_id}</code> → COCO ZIP-Export: <code>coco.json</code> + extrahierte Frames für MMPose Fine-tuning</li>
+          <li><code>DELETE /api/annotations/{job_id}</code> → Setzt manuelle Annotationen für einen Job zurück</li>
+        </ul>
+
+        <h4 class="text-green">Neu – Upload &amp; Metadaten</h4>
+        <ul>
+          <li><strong>Upload-Formular: <code>camera_angle</code>-Feld:</strong> Kameraposition wählbar (Seitenansicht links/rechts, Schräg, Frontal)</li>
+          <li><strong><code>training_consent</code> und <code>gait_label</code> end-to-end verdrahtet:</strong> Werte werden beim Upload korrekt gespeichert und verarbeitet</li>
+          <li><strong><code>training_consent=True</code> setzt automatisch <code>is_training_contribution=True</code></strong></li>
+        </ul>
+
+        <h4 class="text-green">Neu – VideoLibrary &amp; Video-Detail</h4>
+        <ul>
+          <li><strong>Filterung nach „Gemischt (mehrere Gangarten)"</strong> als neue Option in der Gangart-Auswahl</li>
+          <li><strong><code>training_consent</code>-Badge</strong> auf Videokarten (grüner „✓ Training"-Hinweis)</li>
+          <li><strong>Video-Detail-Seite: Metadaten-Leiste</strong> mit Pferdename, Gangart, Kameraposition und Training-Badge</li>
+          <li><strong><code>VideoListItem</code>-API-Response</strong> enthält jetzt das Feld <code>training_consent</code></li>
+        </ul>
+
+        <h4 class="text-green">Neu – Auth</h4>
+        <ul>
+          <li><strong>Login/Logout-Button im Header</strong> sichtbar; AuthModal ist in <code>App.tsx</code> vollständig eingebunden</li>
+        </ul>
+
+        <h4 class="text-green">Neu – LernStatus</h4>
+        <ul>
+          <li><strong><code>training_videos</code>-Zähler</strong> summiert jetzt alle Videos mit <code>training_consent=True</code> (nicht nur explizit als Lernbeitrag markierte)</li>
+        </ul>
+
+        <h4 style="color:#FFA500;">Geändert – Audit-Fixes</h4>
+        <ul>
+          <li><strong>UUID-Validierung:</strong> Alle <code>job_id</code>-Endpunkte prüfen das Format via <code>_require_job_id()</code> (verhindert Path-Traversal)</li>
+          <li><strong>CORS:</strong> <code>allow_origins</code> aus <code>CORS_ORIGINS</code>-Umgebungsvariable (Standard: <code>localhost:5173/3000</code>, kein hardkodiertes <code>*</code> mehr)</li>
+          <li><strong>SECRET_KEY-Warnung:</strong> Backend gibt beim Start eine Warnung aus, wenn kein <code>SECRET_KEY</code> gesetzt ist</li>
+          <li><strong>Backend-Start:</strong> <code>_recover_completed_jobs()</code> läuft im Thread-Pool via <code>run_in_executor</code> (kein Event-Loop-Block mehr)</li>
+          <li><strong>Account-Löschung:</strong> Bulk-Delete aller Nutzerdaten (Videos, Frames, Keypoints, Annotierungen) bei DSGVO-konformer Account-Löschung</li>
+        </ul>
+
+        <h4>Datenbank</h4>
+        <ul>
+          <li>UniqueConstraint <code>(video_id, frame_nr)</code> auf der <code>frames</code>-Tabelle (idempotente Migration beim Start)</li>
+        </ul>
+      </div>
+
+      <!-- v0.2 -->
+      <div id="v0-2" class="timeline-item section-anchor">
+        <div class="timeline-version">v0.2.0 – Tölt-Analyse <span class="version-badge v02">Implementiert</span></div>
+        <div class="timeline-date">2026-04</div>
+
+        <h4 class="text-green">Neu</h4>
+        <ul>
+          <li><strong>MMPose-Integration:</strong> hrnet_w32_horse10 mit 22 Keypoints (mAP ~88%) als v0.2-Option</li>
+          <li><strong>Pose Factory:</strong> Modularer Estimator-Austausch über <code>config.yaml</code> ohne Code-Änderung</li>
+          <li><strong>Tölt-Scoring:</strong> FEIF-konforme Bewertung 0–10, Trabeinlagen, Pass-Einlagen, Takt-Unregelmäßigkeiten</li>
+          <li><strong>Rennpass-Scoring:</strong> Lateral-Synchronizität, Schwebephase, Stride Count</li>
+          <li><strong>Takt-Timeline:</strong> 4-spurige Huf-Landungs-Visualisierung, sync mit Video-Player</li>
+          <li><strong>Gangart-Erkennung:</strong> Regelbasiert aus Fesselgelenk-Trajektorien, alle 5 Gangarten</li>
+          <li><strong>Authentifizierung:</strong> E-Mail + Passwort, JWT, Account-Verwaltung</li>
+          <li><strong>i18n:</strong> Vollständige Übersetzung Deutsch / Englisch</li>
+          <li><strong>Annotationstool:</strong> Browser-basiertes Keypoint-Korrektur-Tool</li>
+          <li><strong>COCO-Export:</strong> Training-Daten im COCO-Keypoint-Format exportieren</li>
+          <li><strong>Training-Job-Verwaltung:</strong> Modellversionen anlegen, verwalten, Rollback</li>
+          <li><strong>Stats-Dashboard:</strong> Globale Statistiken, Gangart-Verteilung</li>
+          <li><strong>Frame-API:</strong> <code>/api/frame/{id}/{nr}</code> – einzelne Frames als JPEG abrufbar</li>
+          <li><strong>PostgreSQL-Schema:</strong> videos / frames / keypoints / annotations / training_jobs / users</li>
+          <li><strong>DSGVO:</strong> Account-Löschung mit vollständigem CASCADE-Delete aller Nutzerdaten</li>
+          <li><strong>Training-Beitrag:</strong> Videos mit Consent für Modell-Training freigeben</li>
+          <li><strong>Rennpass-Analyse (US-2.3):</strong> Vollständige Implementierung inkl. Schwebephase</li>
+        </ul>
+
+        <h4 style="color:#FFA500;">Geändert</h4>
+        <ul>
+          <li>Video-Upload akzeptiert jetzt Metadaten (Pferdename, Gangart, Kamerawinkel)</li>
+          <li>Job-Status enthält jetzt <code>gait_detected</code>-Feld</li>
+          <li>Backend auf Python 3.12 und FastAPI 0.111+ aktualisiert</li>
+          <li>DB-Writes über psycopg3 COPY für Batch-Performance</li>
+          <li>Frontend auf React 18 / Vite 5 / Tailwind 3.4 aktualisiert</li>
+        </ul>
+
+        <h4 class="text-red">Bekannte Probleme</h4>
+        <ul>
+          <li>MMPose-Installation muss manuell erfolgen (nicht im Dockerfile)</li>
+          <li>Gangart-Erkennungs-Schwellwerte noch nicht auf Islandpferd-Videos kalibriert</li>
+        </ul>
+      </div>
+
+      <!-- v0.1 -->
+      <div id="v0-1" class="timeline-item section-anchor">
+        <div class="timeline-version">v0.1.0 – MVP <span class="version-badge v01">Veröffentlicht</span></div>
+        <div class="timeline-date">2026-03</div>
+
+        <h4 class="text-green">Neu (initiales Release)</h4>
+        <ul>
+          <li><strong>FastAPI-Backend:</strong> Video-Upload, Job-Verwaltung, Status-Polling</li>
+          <li><strong>YOLOv8n BBox-Erkennung:</strong> Pferd-Erkennung (Class 17), Confidence 0.3</li>
+          <li><strong>Proportionale Keypoints:</strong> 17 Keypoints aus BBox-Proportionen (kein ML)</li>
+          <li><strong>Skeleton Drawing:</strong> Farbiges Skelett-Overlay auf Video-Frames</li>
+          <li><strong>H.264-Encoding:</strong> Zwei-Stufen-Encoding für Browser-Kompatibilität</li>
+          <li><strong>Island-CI:</strong> Dark Mode, Islandpferd-Farbpalette (Vulkanschwarz, Gletscherblau, Nordlicht-Grün)</li>
+          <li><strong>Facing-Detection:</strong> Pixel-Varianz-Methode für Blickrichtung</li>
+          <li><strong>Datei-Cleanup:</strong> Auto-Delete nach TTL, Zwischendateien sofort</li>
+          <li><strong>Job-Recovery:</strong> Abgeschlossene Jobs nach Server-Neustart wiederherstellen</li>
+          <li><strong>Docker Compose:</strong> PostgreSQL + Backend + Frontend</li>
+          <li><strong>React-Frontend:</strong> Drag-Drop-Upload, Fortschrittsbalken, Video-Vorschau</li>
+        </ul>
+
+        <h4 style="color:#FFA500;">Bekannte Limitierungen in v0.1</h4>
+        <ul>
+          <li>Nur 17 proportionale Keypoints – keine echte Pose-Estimation</li>
+          <li>Einzelne Hufe nicht trennbar für Takt-Analyse</li>
+          <li>Kein FEIF-Scoring</li>
+          <li>Kein User-Management / Auth</li>
+          <li>Kein Datenbankschema für Keypoints</li>
+        </ul>
+
+        <h4 class="text-red">Behobene Bugs aus Prototyp</h4>
+        <ul>
+          <li>GTX 1070 CUDA-Fehler (sm_61 / PyTorch ≥ 2.1) → <code>device="cpu"</code></li>
+          <li>ffmpeg nicht im PATH → <code>imageio-ffmpeg</code> gebündeltes Binary</li>
+          <li>Job-State nach Neustart weg → <code>_recover_completed_jobs()</code></li>
+          <li>Progress hängt bei ~45% (vid_stride=2) → <code>expected_frames = total_frames // VID_STRIDE</code></li>
+        </ul>
+      </div>
+
+      <!-- PLANNED v0.3 -->
+      <div id="v0-3" class="timeline-item section-anchor">
+        <div class="timeline-version">v0.3.0 – Vollanalyse <span class="version-badge v03">Geplant</span></div>
+        <div class="timeline-date">Geplant 2026-Q3</div>
+
+        <h4>Geplante Features</h4>
+        <ul>
+          <li>Lern-Video-Upload: Nutzer stellt Videos für Training zur Verfügung (US-4.0)</li>
+          <li>Fine-tuning auf nutzereigenen Islandpferd-Videos (v0.3 Modell-Schicht)</li>
+          <li>Zusätzliche Keypoints: Sprunggelenk ×2, Kniegelenk HB ×2</li>
+          <li>ML-basierte Gangart-Klassifikation (LSTM/1D-CNN) statt Regelwerk</li>
+          <li>Trab-, Schritt- und Galopp-Analyse-Basis</li>
+        </ul>
+      </div>
+
+      <!-- SPRINT G GEPLANT -->
+      <div id="sprint-g" class="timeline-item section-anchor">
+        <div class="timeline-version">Sprint G <span class="version-badge" style="background:var(--surface2);color:var(--muted)">Geplant</span></div>
+        <div class="timeline-date">Nächster Sprint</div>
+
+        <h4>Analyse-Präzision – Bodenreferenz + Geschwindigkeit</h4>
+        <ul>
+          <li><strong>G1 – Bodenebene als Foot-On-Referenz:</strong> Rollendes Minimum der Fesselgelenk-Y-Werte (relativ zur Bbox, Zeitfenster ~2 s) als lokale Bodenlinie. Foot-On wird erkannt, wenn das Fesselgelenk die Bodenlinie erreicht – robuster als rohes Peak-Maximum. Funktioniert für ovale, ebene Bahnen ohne Steigung (&gt;90% der Videos).</li>
+          <li><strong>G2 – Stockmaß-Eingabe:</strong> Optionales Feld in der Upload-UI. Wird in der DB gespeichert (<code>videos.stockmass_cm</code>).</li>
+          <li><strong>G3 – Geschwindigkeitsschätzung:</strong> Formel <code>speed = (Δx_px / bbox_height_px) × stockmaß_m × fps</code> – distanzinvariant, da Kameraabstand sich in Zähler und Nenner herauskürzt. Nur auf Seitenansicht-Frames. Rennpass eindeutig erkennbar bei &gt;8 m/s.</li>
+          <li><strong>G4 – Anzeige in Score-Cards:</strong> Geschwindigkeitsband in ToltScoreCard / RennpassScoreCard; Plausibilitätsprüfung (z.B. LAP=Tölt aber speed &lt; 2 m/s → Hinweis „eher Schritt").</li>
+        </ul>
+      </div>
+
+    </div><!-- /timeline -->
+
+  </main>
+</div>
+
+<script>
+  const anchors = document.querySelectorAll('.section-anchor');
+  const links = document.querySelectorAll('.sidebar a');
+  window.addEventListener('scroll', () => {
+    let current = '';
+    anchors.forEach(a => { if (window.scrollY >= a.offsetTop - 80) current = a.id; });
+    links.forEach(l => {
+      l.classList.toggle('active', l.getAttribute('href') === '#' + current);
+    });
+  });
+</script>
+</body>
+</html>
