@@ -290,7 +290,11 @@ class GaitDetector:
         if not ground_buf:
             return None
         g = float(max(ground_buf))
-        return g if g >= 0.3 else None
+        if g < 0.3:
+            return None
+        if g < 0.92:  # Huf erreicht nie den unteren Bbox-Rand → Bodenlinie unzuverlässig
+            return None
+        return g
 
     def _compute_lap_df(self) -> tuple[float, float] | None:
         """Berechnet LAP (Lateral Advanced Placement) und mittleren Duty Factor.
@@ -373,37 +377,30 @@ class GaitDetector:
         if lap > 0.75:
             lap = 1.0 - lap
 
-        # Duty Factor: Sprint G1 nutzt Bodenlinie-basierte Standphasen-Erkennung
-        # B3 Phase 2: Sprunggelenk-Y ergänzt die 4 Fesselgelenk-Trajektorien (sofern vorhanden)
-        df_values: list[float] = []
-        if use_ground_line:
-            # G1-Pfad: Standphase = y_rel >= ground_y - threshold
-            for arr, g_y in [
-                (lh_s, g_lh), (lf_s, g_lf),
-                (rh_s, g_rh if g_rh is not None else g_lh),
-                (rf_s, g_rf if g_rf is not None else g_lf),
-            ]:
-                on_thr = g_y - self.GROUND_THRESHOLD
-                df_values.append(float(np.mean(arr >= on_thr)))
-            # Sprunggelenk-Y (B3): Fallback auf alten Schwellenwert (kein ground_buf für Hocks)
-            for hock_arr_src in [self._hock_l_y, self._hock_r_y]:
-                if len(hock_arr_src) >= self.MIN_FRAMES:
-                    arr = _smooth(np.array(hock_arr_src), self.smooth_window)
-                    threshold = 0.95 * float(np.max(arr))
-                    if threshold >= 0.5:
-                        df_values.append(float(np.mean(arr >= threshold)))
-        else:
-            # Fallback: 95%-Schwellenwert wie bisher
-            df_sources = [lh_s, lf_s, rh_s, rf_s]
-            if len(self._hock_l_y) >= self.MIN_FRAMES:
-                df_sources.append(_smooth(np.array(self._hock_l_y), self.smooth_window))
-            if len(self._hock_r_y) >= self.MIN_FRAMES:
-                df_sources.append(_smooth(np.array(self._hock_r_y), self.smooth_window))
-            for arr in df_sources:
-                threshold = 0.95 * float(np.max(arr))
-                if threshold < 0.5:
+        # DF: Perzentil-basiert – robust unabhängig von absoluter Bbox-Höhe
+        # Für jeden Trajektorie-Buffer: Schwelle zwischen 15.-Perzentil (Swing) und
+        # 90.-Perzentil (Stance) bestimmen, bei 55% des Wertebereichs teilen
+        df_values = []
+        for arr in [lh_s, lf_s, rh_s, rf_s]:
+            if len(arr) < self.MIN_FRAMES:
+                continue
+            p_low  = float(np.percentile(arr, 15))
+            p_high = float(np.percentile(arr, 90))
+            rng = p_high - p_low
+            if rng < 0.04:  # Zu geringe Varianz → kein Stance/Swing-Muster erkennbar
+                continue
+            thr = p_low + 0.55 * rng
+            df_values.append(float(np.mean(arr >= thr)))
+        for hock_arr_src in [self._hock_l_y, self._hock_r_y]:
+            if len(hock_arr_src) >= self.MIN_FRAMES:
+                arr = _smooth(np.array(hock_arr_src), self.smooth_window)
+                p_low  = float(np.percentile(arr, 15))
+                p_high = float(np.percentile(arr, 90))
+                rng = p_high - p_low
+                if rng < 0.04:
                     continue
-                df_values.append(float(np.mean(arr >= threshold)))
+                thr = p_low + 0.55 * rng
+                df_values.append(float(np.mean(arr >= thr)))
         df = float(np.mean(df_values)) if df_values else 0.5
 
         return lap, df
@@ -475,17 +472,7 @@ class GaitDetector:
         # Mindest-Datenpunkte: ~0,5 s bei effective_fps
         min_pts = max(6, int(self.effective_fps * 0.5))
         if len(cx) < min_pts or len(bh) < min_pts:
-            # Letzter Ausweg: einfacher normierter Δx-Median aus _speed_dx_norm
-            if self.stockmass_m is None:
-                return None
-            buf = sorted(self._speed_dx_norm)
-            if len(buf) < 6:
-                return None
-            active = buf[len(buf) // 2:]
-            median_dx_norm = float(np.median(active))
-            if median_dx_norm < 0.004:
-                return None
-            return round(median_dx_norm * self.stockmass_m * self.effective_fps, 2)
+            return None
 
         n = len(cx)
         t = np.arange(n, dtype=float)
