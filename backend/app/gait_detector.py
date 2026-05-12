@@ -177,6 +177,11 @@ class GaitDetector:
         self._ground_buf_rf: deque[float] = deque(maxlen=rolling_window)
         self._ground_buf_lh: deque[float] = deque(maxlen=rolling_window)
         self._ground_buf_rh: deque[float] = deque(maxlen=rolling_window)
+        # LH Fesselgelenk X-Position (absolute Pixel) für Stride-Length-Berechnung
+        # Immer synchron mit _lh befüllt → gleiche Indexierung garantiert
+        self._lh_x: deque[float] = deque(maxlen=self.WINDOW)
+        # Foot-On-Peak-Cache: von _compute_lap_df gesetzt, von _compute_speed_stride gelesen
+        self._cached_lh_peaks: list[int] = []
         self._frame_count = 0
 
     def _kp_y(self, keypoints: list[tuple], idx: int, y1: int, h: int) -> float | None:
@@ -198,11 +203,11 @@ class GaitDetector:
         h = max(1, y2 - y1)
         self._is_side_view.append(is_side_view)
         if is_side_view:
-            for deq, ground_buf, idx in [
-                (self._lf, self._ground_buf_lf, self._idx_lf),
-                (self._rf, self._ground_buf_rf, self._idx_rf),
-                (self._lh, self._ground_buf_lh, self._idx_lh),
-                (self._rh, self._ground_buf_rh, self._idx_rh),
+            for deq, ground_buf, idx, x_deq in [
+                (self._lf, self._ground_buf_lf, self._idx_lf, None),
+                (self._rf, self._ground_buf_rf, self._idx_rf, None),
+                (self._lh, self._ground_buf_lh, self._idx_lh, self._lh_x),
+                (self._rh, self._ground_buf_rh, self._idx_rh, None),
             ]:
                 val = self._kp_y(keypoints, idx, y1, h)
                 if val is not None:
@@ -210,6 +215,8 @@ class GaitDetector:
                     # Sprint G1: rolling-maximum der bbox-relativen Y-Werte als Bodenlinie
                     # (maximum weil y_rel=1.0 = Boden; Maximum der letzten ~2s = tiefster Punkt)
                     ground_buf.append(val)
+                    if x_deq is not None:
+                        x_deq.append(float(keypoints[idx][0]))
             if self._idx_hock_l is not None:
                 val = self._kp_y(keypoints, self._idx_hock_l, y1, h)
                 if val is not None:
@@ -341,6 +348,7 @@ class GaitDetector:
             rh_peaks = _find_peaks(rh_s)
             rf_peaks = _find_peaks(rf_s)
 
+        self._cached_lh_peaks = lh_peaks
         if len(lh_peaks) < 2:
             return None
 
@@ -402,23 +410,65 @@ class GaitDetector:
 
     # ── Geschwindigkeitsschätzung (Sprint G3) ──────────────────────────────
 
+    def _compute_speed_stride(self) -> float | None:
+        """Geschwindigkeit aus Schrittlänge × Schrittfrequenz: v = L / T.
+
+        Schrittlänge L = medianer Pixel-X-Abstand des LH-Fesselgelenks zwischen
+        aufeinanderfolgenden Foot-On-Events, skaliert mit Bbox-Höhe / Stockmaß.
+        Robust gegen Bbox-Jitter und Kameraschwenk im Stand; nutzt bereits
+        berechnete lh_peaks aus _compute_lap_df().
+        """
+        peaks = self._cached_lh_peaks
+        if len(peaks) < 2 or self.stockmass_m is None:
+            return None
+        lh_x = np.array(self._lh_x)
+        bh   = np.array(self._bbox_h)
+        # _lh_x und _lh werden synchron befüllt; Länge muss peaks abdecken
+        if len(lh_x) < max(peaks) + 1:
+            return None
+
+        stride_px: list[float] = []
+        stride_durations: list[float] = []
+        for i in range(len(peaks) - 1):
+            stride_px.append(abs(lh_x[peaks[i + 1]] - lh_x[peaks[i]]))
+            stride_durations.append((peaks[i + 1] - peaks[i]) / self.effective_fps)
+
+        median_stride_px = float(np.median(stride_px))
+        if median_stride_px < 5:  # < 5 px = kaum Vorwärtsbewegung (Kameraschwenk o.ä.)
+            return None
+
+        median_bh = float(np.median(bh))
+        if median_bh < 10:
+            return None
+
+        stride_length_m = median_stride_px / (median_bh / self.stockmass_m)
+
+        median_stride_s = float(np.median(stride_durations))
+        if median_stride_s < 0.15:  # < 0.15 s Schrittdauer = physikalisch unmöglich
+            return None
+
+        speed = stride_length_m / median_stride_s
+        if speed < 0.3 or speed > 16.5:
+            return None
+        return round(speed, 2)
+
     def _compute_speed(self) -> float | None:
-        """Schätzt Pferd-Geschwindigkeit in m/s via linearer Regression über cx-Trajektorie.
+        """Schätzt Pferd-Geschwindigkeit in m/s.
 
-        Methode: linreg(frame_index → cx_px) liefert Anstieg in px/Frame.
-        Skalierung: px/Frame × effective_fps × (stockmass_m / median_bbox_h) = m/s
-
-        Vorteile gegenüber frame-by-frame Δx:
-          - Robust gegen Bbox-Jitter (alle Frames gleichzeitig ausgewertet)
-          - Kein Stride-Detektor nötig → funktioniert auch im v0.1-Modus
-          - Vorzeichen zeigt Bewegungsrichtung (wird für Betrag genutzt)
-
-        Fallback ohne Stockmaß: normierter Median |Δx|/h (nur Verhältnis, kein m/s).
+        Primär: _compute_speed_stride() – Schrittlänge × Schrittfrequenz (v = L / T).
+        Fallback: Lineare Regression über cx-Trajektorie (px/Frame → m/s).
 
         Sanity-Grenzen Islandpferd:
           Schritt 1,4–2,2 m/s | Tölt 3–9 | Trab 3,5–6 | Galopp 5–10 | Rennpass 10–16
           → Untergrenze 0,3 m/s (langsamer Schritt), Obergrenze 16,5 m/s (Rennpass-Spitze)
         """
+        # Primärmethode: Stride-Length (nur wenn Peaks aus _compute_lap_df verfügbar)
+        if len(self._cached_lh_peaks) >= 2:
+            stride_speed = self._compute_speed_stride()
+            if stride_speed is not None:
+                return stride_speed
+
+        # Fallback: Lineare Regression über cx-Trajektorie
         cx = np.array(self._traj_cx)
         bh = np.array(self._traj_h)
 

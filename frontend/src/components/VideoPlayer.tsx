@@ -155,8 +155,7 @@ export default function VideoPlayer({ jobId, onTimeUpdate, seekToMs, fps, horseN
   const showGaitRef    = useRef(true)
   const horseNameRef   = useRef(horseName)
   const speedMsRef     = useRef(speedMs)
-  const lastFetchMsRef = useRef(-9999)
-  const rafIdRef       = useRef(0)
+  const rvfcHandleRef  = useRef(0)
   const jobIdRef       = useRef(jobId)
   const fpsRef         = useRef(fps ?? ESTIMATED_FPS)
 
@@ -178,8 +177,8 @@ export default function VideoPlayer({ jobId, onTimeUpdate, seekToMs, fps, horseN
   useEffect(() => { speedMsRef.current = speedMs }, [speedMs])
   useEffect(() => { jobIdRef.current = jobId; kpCacheRef.current.clear(); fetchingFrames.current.clear() }, [jobId])
   useEffect(() => { fpsRef.current = fps ?? ESTIMATED_FPS }, [fps])
-  useEffect(() => { showKpRef.current = showKeypoints; lastFetchMsRef.current = -9999 }, [showKeypoints])
-  useEffect(() => { showGaitRef.current = showGaitLabel; lastFetchMsRef.current = -9999 }, [showGaitLabel])
+  useEffect(() => { showKpRef.current = showKeypoints }, [showKeypoints])
+  useEffect(() => { showGaitRef.current = showGaitLabel }, [showGaitLabel])
 
   // Fullscreen-Wechsel erkennen
   useEffect(() => {
@@ -210,61 +209,71 @@ export default function VideoPlayer({ jobId, onTimeUpdate, seekToMs, fps, horseN
       .finally(() => fetchingFrames.current.delete(frameNr))
   }, [])
 
-  // rAF-Loop: Canvas zeichnen + Frames vorladen
+  // rVFC-Loop: Canvas frame-synchron zeichnen (feuert exakt wenn Browser Frame an Compositor übergibt)
   useEffect(() => {
     let active = true
+    const video = videoRef.current
+    if (!video) return
 
-    const tick = () => {
-      if (!active) return
+    type RvfcMetadata = { mediaTime: number }
 
-      const video  = videoRef.current
+    const doRedraw = () => {
       const canvas = canvasRef.current
-      if (video && canvas) {
-        if (canvas.width !== video.clientWidth || canvas.height !== video.clientHeight) {
-          canvas.width  = video.clientWidth
-          canvas.height = video.clientHeight
+      if (!canvas) return
+      if (canvas.width !== video.clientWidth || canvas.height !== video.clientHeight) {
+        canvas.width  = video.clientWidth
+        canvas.height = video.clientHeight
+      }
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+      if (showKpRef.current)   drawKeypoints(ctx, video, kpRef.current)
+      if (showGaitRef.current) drawGaitOverlay(ctx, video, gaitRef.current, horseNameRef.current, speedMsRef.current)
+    }
+
+    const onFrame = (_now: number, metadata: RvfcMetadata) => {
+      if (!active) return
+      if (showKpRef.current || showGaitRef.current) {
+        const frameNr = Math.round(metadata.mediaTime * fpsRef.current)
+        const tMs     = metadata.mediaTime * 1000
+        const cached  = kpCacheRef.current.get(frameNr)
+        if (cached) {
+          kpRef.current   = cached.keypoints
+          gaitRef.current = cached.gait
         }
-        const ctx = canvas.getContext('2d')
-        if (ctx) {
-          ctx.clearRect(0, 0, canvas.width, canvas.height)
-          if (showKpRef.current)   drawKeypoints(ctx, video, kpRef.current)
-          if (showGaitRef.current) drawGaitOverlay(ctx, video, gaitRef.current, horseNameRef.current, speedMsRef.current)
-        }
-
-        if (showKpRef.current || showGaitRef.current) {
-          const tMs     = video.currentTime * 1000
-          const frameNr = Math.floor(video.currentTime * fpsRef.current)
-          const frameDeltaMs = 900 / fpsRef.current
-
-          // Cache-Treffer: sofort anzeigen
-          const cached = kpCacheRef.current.get(frameNr)
-          if (cached) {
-            kpRef.current   = cached.keypoints
-            gaitRef.current = cached.gait
-          }
-
-          // Fetch auslösen wenn Zeit weit genug fortgeschritten
-          if (Math.abs(tMs - lastFetchMsRef.current) > frameDeltaMs) {
-            lastFetchMsRef.current = tMs
-            // Aktuellen Frame laden (falls nicht gecacht)
-            prefetchFrame(frameNr, tMs)
-            // Nächste Frames vorausladen
-            for (let a = 1; a <= PREFETCH_AHEAD; a++) {
-              prefetchFrame(frameNr + a, tMs + a * 1000 / fpsRef.current)
-            }
-          }
+        prefetchFrame(frameNr, tMs)
+        for (let a = 1; a <= PREFETCH_AHEAD; a++) {
+          prefetchFrame(frameNr + a, tMs + a * 1000 / fpsRef.current)
         }
       }
-
-      rafIdRef.current = requestAnimationFrame(tick)
+      doRedraw()
+      rvfcHandleRef.current = (video as any).requestVideoFrameCallback(onFrame)
     }
 
-    rafIdRef.current = requestAnimationFrame(tick)
+    rvfcHandleRef.current = (video as any).requestVideoFrameCallback(onFrame)
+
+    // Canvas-Größe bei Fenster-Resize aktualisieren (rVFC feuert nur bei neuen Frames)
+    const resizeObserver = new ResizeObserver(doRedraw)
+    resizeObserver.observe(video)
+
     return () => {
       active = false
-      cancelAnimationFrame(rafIdRef.current)
+      ;(video as any).cancelVideoFrameCallback(rvfcHandleRef.current)
+      resizeObserver.disconnect()
     }
   }, [jobId, prefetchFrame])
+
+  // Forced Redraw wenn Overlays ein-/ausgeschaltet werden (Video kann pausiert sein)
+  useEffect(() => {
+    const video  = videoRef.current
+    const canvas = canvasRef.current
+    if (!video || !canvas) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    if (showKeypoints) drawKeypoints(ctx, video, kpRef.current)
+    if (showGaitLabel) drawGaitOverlay(ctx, video, gaitRef.current, horseNameRef.current, speedMsRef.current)
+  }, [showKeypoints, showGaitLabel])
 
   // Video-Events für UI-State (Fortschrittsbalken, Zeitanzeige)
   useEffect(() => {
