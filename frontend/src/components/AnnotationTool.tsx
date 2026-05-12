@@ -173,6 +173,17 @@ export default function AnnotationTool({ jobId, onClose }: Props) {
   const isPanning    = useRef(false)
   const panStart     = useRef({ mx: 0, my: 0, px: 0, py: 0 })
 
+  // Undo/Redo
+  const undoStackRef   = useRef<KeypointEntry[][]>([])
+  const redoStackRef   = useRef<KeypointEntry[][]>([])
+  const dragStartRef   = useRef<KeypointEntry[] | null>(null)
+
+  const pushUndo = useCallback((snapshot: KeypointEntry[]) => {
+    undoStackRef.current.push(snapshot)
+    if (undoStackRef.current.length > 50) undoStackRef.current.shift()
+    redoStackRef.current = []
+  }, [])
+
   // Konvertiert Screen-Koordinaten → Canvas-Koordinaten (zoom-bereinigt)
   const screenToCanvas = (clientX: number, clientY: number) => {
     const canvas = canvasRef.current
@@ -301,19 +312,6 @@ export default function AnnotationTool({ jobId, onClose }: Props) {
 
   useEffect(() => { drawCanvas() }, [drawCanvas])
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { setArmedKpName(null); return }
-      if ((e.key === 'Delete' || e.key === 'Backspace') && activeKpIndex !== null) {
-        e.preventDefault()
-        setKeypoints(prev => prev.filter((_, j) => j !== activeKpIndex))
-        setActiveKpIndex(null)
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [activeKpIndex])
-
   const getCanvasKpIndex = (clientX: number, clientY: number): number => {
     if (!imgNaturalSize || !imgDisplaySize) return -1
     const { mx, my } = screenToCanvas(clientX, clientY)
@@ -339,6 +337,8 @@ export default function AnnotationTool({ jobId, onClose }: Props) {
         y: Math.max(0, Math.min(1, my / (imgNaturalSize.h * scaleY))),
         confidence: 2.0,
       }
+      // Snapshot vor Placement
+      pushUndo([...keypoints])
       // Bestehenden Punkt gleichen Namens ersetzen (kein Duplikat)
       setKeypoints(prev => [...prev.filter(k => k.name !== armedKpName), newKp])
       setArmedKpName(null)
@@ -346,6 +346,7 @@ export default function AnnotationTool({ jobId, onClose }: Props) {
     }
     const idx = getCanvasKpIndex(e.clientX, e.clientY)
     if (idx >= 0) {
+      dragStartRef.current = [...keypoints]
       draggingRef.current = idx
       setActiveKpIndex(idx)
     } else {
@@ -387,6 +388,10 @@ export default function AnnotationTool({ jobId, onClose }: Props) {
   }
 
   const handleMouseUp = () => {
+    if (draggingRef.current !== null && dragStartRef.current !== null) {
+      pushUndo(dragStartRef.current)
+    }
+    dragStartRef.current = null
     draggingRef.current = null
     isPanning.current = false
     if (canvasRef.current) canvasRef.current.style.cursor = 'move'
@@ -435,7 +440,7 @@ export default function AnnotationTool({ jobId, onClose }: Props) {
     setPan({ x: (vpW - img.offsetWidth * fitZoom) / 2, y: (vpH - img.offsetHeight * fitZoom) / 2 })
   }
 
-  const goToFrame = (nr: number) => {
+  const goToFrame = useCallback((nr: number) => {
     const hasUnsaved = JSON.stringify(keypoints) !== JSON.stringify(originalKeypoints)
     if (hasUnsaved && !window.confirm(t('annotation.discardConfirm'))) return
     const n = Math.max(0, nr)
@@ -443,7 +448,77 @@ export default function AnnotationTool({ jobId, onClose }: Props) {
     setFrameNrInput(String(n))
     setActiveKpIndex(null)
     setArmedKpName(null)
-  }
+  }, [keypoints, originalKeypoints, t])
+
+  const handleUndo = useCallback(() => {
+    const prev = undoStackRef.current.pop()
+    if (!prev) return
+    redoStackRef.current.push([...keypoints])
+    setKeypoints(prev)
+    setActiveKpIndex(null)
+  }, [keypoints])
+
+  const handleRedo = useCallback(() => {
+    const next = redoStackRef.current.pop()
+    if (!next) return
+    undoStackRef.current.push([...keypoints])
+    setKeypoints(next)
+    setActiveKpIndex(null)
+  }, [keypoints])
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const tag = (document.activeElement?.tagName ?? '').toUpperCase()
+      const inputFocused = tag === 'INPUT' || tag === 'TEXTAREA'
+
+      if (e.key === 'Escape') { setArmedKpName(null); return }
+
+      // Undo / Redo
+      if (e.ctrlKey && !e.shiftKey && e.key === 'z') { e.preventDefault(); handleUndo(); return }
+      if (e.ctrlKey && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) { e.preventDefault(); handleRedo(); return }
+
+      // Delete aktiven Keypoint
+      if ((e.key === 'Delete' || e.key === 'Backspace') && activeKpIndex !== null) {
+        e.preventDefault()
+        pushUndo([...keypoints])
+        setKeypoints(prev => prev.filter((_, j) => j !== activeKpIndex))
+        setActiveKpIndex(null)
+        return
+      }
+
+      // Tab → nächster unsicherer Keypoint
+      if (e.key === 'Tab') {
+        e.preventDefault()
+        const lowConf = keypoints
+          .map((kp, i) => ({ kp, i }))
+          .filter(({ kp }) => kp.confidence < 0.5 && kp.confidence < 2.0)
+          .sort((a, b) => a.kp.confidence - b.kp.confidence)
+        if (!lowConf.length) return
+        const currentPos = lowConf.findIndex(({ i }) => i === activeKpIndex)
+        const next = lowConf[(currentPos + 1) % lowConf.length]
+        setActiveKpIndex(next.i)
+        return
+      }
+
+      // Frame-Navigation – nur wenn kein Input-Feld fokussiert
+      if (!inputFocused) {
+        if (e.key === 'a' || e.key === 'ArrowLeft') {
+          e.preventDefault()
+          if (e.shiftKey) goToFrame(frameNr - FRAME_STEP)
+          else goToFrame(frameNr - 1)
+          return
+        }
+        if (e.key === 'd' || e.key === 'ArrowRight') {
+          e.preventDefault()
+          if (e.shiftKey) goToFrame(frameNr + FRAME_STEP)
+          else goToFrame(frameNr + 1)
+          return
+        }
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [activeKpIndex, handleUndo, handleRedo, pushUndo, keypoints, frameNr, goToFrame])
 
   const handleSave = async () => {
     setSaving(true)
@@ -462,6 +537,7 @@ export default function AnnotationTool({ jobId, onClose }: Props) {
   }
 
   const handleReset = () => {
+    pushUndo([...keypoints])
     setKeypoints(originalKeypoints)
     setActiveKpIndex(null)
   }
@@ -792,6 +868,22 @@ export default function AnnotationTool({ jobId, onClose }: Props) {
                 <span className="text-[#FFD700]">★</span>
                 {t('annotation.legendManual')}
               </div>
+              <div className="mt-2 pt-2 border-t border-geysirweiss/10 space-y-1">
+                <div className="text-[9px] font-semibold uppercase tracking-wider text-geysirweiss/25 mb-1">Tastatur</div>
+                {[
+                  ['A / D', '±1 Frame'],
+                  ['⇧+A / ⇧+D', `±${FRAME_STEP} Frames`],
+                  ['Tab', 'Nächster unsicherer KP'],
+                  ['Ctrl+Z / Y', 'Rückgängig / Wdh.'],
+                  ['Del', 'KP entfernen'],
+                  ['Esc', 'Abbrechen'],
+                ].map(([key, desc]) => (
+                  <div key={key} className="flex items-center justify-between text-[9px] text-geysirweiss/25">
+                    <span className="font-mono bg-geysirweiss/5 px-1 rounded">{key}</span>
+                    <span>{desc}</span>
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* Aktionen */}
@@ -827,6 +919,7 @@ export default function AnnotationTool({ jobId, onClose }: Props) {
                 onClick={() => {
                   if (keypoints.length === 0) return
                   if (window.confirm(t('annotation.clearAllConfirm'))) {
+                    pushUndo([...keypoints])
                     setKeypoints([])
                     setActiveKpIndex(null)
                   }
