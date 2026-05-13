@@ -385,9 +385,9 @@ class GaitDetector:
         if lap > 0.75:
             lap = 1.0 - lap
 
-        # DF: Perzentil-basiert – robust unabhängig von absoluter Bbox-Höhe
-        # Für jeden Trajektorie-Buffer: Schwelle zwischen 15.-Perzentil (Swing) und
-        # 90.-Perzentil (Stance) bestimmen, bei 55% des Wertebereichs teilen
+        # DF: Perzentil-basiert – NUR Fesselgelenke (berühren den Boden).
+        # Sprunggelenke/Karpus NICHT einbeziehen: diese Gelenke berühren nie den Boden,
+        # ihr Y-Wert ist dauerhaft hoch und würde DF systematisch überschätzen → Tölt → Schritt.
         df_values = []
         for arr in [lh_s, lf_s, rh_s, rf_s]:
             if len(arr) < self.MIN_FRAMES:
@@ -399,23 +399,13 @@ class GaitDetector:
                 continue
             thr = p_low + 0.55 * rng
             df_values.append(float(np.mean(arr >= thr)))
-        for hock_arr_src in [self._hock_l_y, self._hock_r_y]:
-            if len(hock_arr_src) >= self.MIN_FRAMES:
-                arr = _smooth(np.array(hock_arr_src), self.smooth_window)
-                p_low  = float(np.percentile(arr, 15))
-                p_high = float(np.percentile(arr, 90))
-                rng = p_high - p_low
-                if rng < 0.04:
-                    continue
-                thr = p_low + 0.55 * rng
-                df_values.append(float(np.mean(arr >= thr)))
         df = float(np.mean(df_values)) if df_values else 0.5
 
         return lap, df
 
     # ── Geschwindigkeitsschätzung (Sprint G3) ──────────────────────────────
 
-    def _compute_speed_stride(self) -> float | None:
+    def _compute_speed_stride(self, gait: str = "---") -> float | None:
         """Geschwindigkeit aus Schrittlänge × Schrittfrequenz: v = L / T.
 
         Schrittlänge L = medianer Pixel-X-Abstand des LH-Fesselgelenks zwischen
@@ -450,9 +440,15 @@ class GaitDetector:
                 corrected_dx = raw_dx - cum_bg_stride
             else:
                 corrected_dx = raw_dx
+            # Stride > 3× Pferd-Höhe = Keypoint-Ausreißer (MMPose-Fehldetektion) → verwerfen
+            local_bh = float(np.median(bh[p0 : p1 + 1])) if p1 < len(bh) else 0.0
+            if local_bh > 0 and abs(corrected_dx) > local_bh * 3.0:
+                continue
             stride_px.append(abs(corrected_dx))
             stride_durations.append((p1 - p0) / self.effective_fps)
 
+        if not stride_px:
+            return None
         median_stride_px = float(np.median(stride_px))
         if median_stride_px < 5:  # < 5 px = kaum Vorwärtsbewegung (Kameraschwenk o.ä.)
             return None
@@ -468,23 +464,31 @@ class GaitDetector:
             return None
 
         speed = stride_length_m / median_stride_s
-        if speed < 0.3 or speed > 16.5:
+        upper = self._GAIT_SPEED_MAX_MS.get(gait, 17.0)
+        if speed < 0.3 or speed > upper:
             return None
         return round(speed, 2)
 
-    def _compute_speed(self) -> float | None:
+    # Obere Geschwindigkeitsgrenze pro Gangart (m/s), großzügig aber physikalisch
+    _GAIT_SPEED_MAX_MS: dict[str, float] = {
+        "Schritt":  3.0,   # ~10,8 km/h
+        "Tölt":    10.0,   # ~36 km/h (inkl. sehr schneller Wettkampf-Tölt)
+        "Trab":     8.0,   # ~28,8 km/h
+        "Galopp":  12.0,   # ~43 km/h
+        "Rennpass": 17.0,  # ~61 km/h
+    }
+
+    def _compute_speed(self, gait: str = "---") -> float | None:
         """Schätzt Pferd-Geschwindigkeit in m/s.
 
         Primär: _compute_speed_stride() – Schrittlänge × Schrittfrequenz (v = L / T).
         Fallback: Lineare Regression über cx-Trajektorie (px/Frame → m/s).
 
-        Sanity-Grenzen Islandpferd:
-          Schritt 1,4–2,2 m/s | Tölt 3–9 | Trab 3,5–6 | Galopp 5–10 | Rennpass 10–16
-          → Untergrenze 0,3 m/s (langsamer Schritt), Obergrenze 16,5 m/s (Rennpass-Spitze)
+        Sanity-Grenzen: global 0,3–17 m/s + gangart-spezifische Obergrenzen.
         """
         # Primärmethode: Stride-Length (nur wenn Peaks aus _compute_lap_df verfügbar)
         if len(self._cached_lh_peaks) >= 2:
-            stride_speed = self._compute_speed_stride()
+            stride_speed = self._compute_speed_stride(gait)
             if stride_speed is not None:
                 return stride_speed
 
@@ -528,8 +532,9 @@ class GaitDetector:
             # → None liefern, damit kein falscher m/s-Wert angezeigt wird
             return None
 
-        # Sanity-Check: Islandpferd 0,3–16,5 m/s
-        if speed < 0.3 or speed > 16.5:
+        # Sanity-Check: global 0,3–17 m/s + gangart-spezifische Obergrenze
+        upper = self._GAIT_SPEED_MAX_MS.get(gait, 17.0)
+        if speed < 0.3 or speed > upper:
             return None
 
         # Plausibilitäts-Filter: r² der Regression muss ausreichend sein (> 0,10)
@@ -548,7 +553,7 @@ class GaitDetector:
     def detect(self) -> GaitResult:
         """Erkennt Gangart und fügt Geschwindigkeitsschätzung (speed_ms) hinzu."""
         result = self._detect_gait()
-        result.speed_ms = self._compute_speed()
+        result.speed_ms = self._compute_speed(result.name)
         return result
 
     def _detect_gait(self) -> GaitResult:
