@@ -15,6 +15,63 @@ from .pose_factory import get_pose_estimator
 
 HORSE_CLASS_ID = 17
 
+
+def _compute_bg_flow(
+    prev_gray: np.ndarray,
+    curr_gray: np.ndarray,
+    horse_bbox: tuple[int, int, int, int],
+    frame_w: int,
+) -> float:
+    """Berechnet medianen horizontalen Kameraschwenk per Optical Flow im Hintergrund.
+
+    Schließt die Pferd-Bbox (+ 20 px Padding) und die oberen 15 % des Bildes aus.
+    Gibt 0.0 zurück wenn zu wenig Hintergrundstruktur gefunden wurde.
+
+    Vorzeichen-Konvention:
+      bg_flow > 0 → Hintergrund bewegt sich nach rechts → Kamera schwenkt nach links
+      bg_flow < 0 → Hintergrund bewegt sich nach links  → Kamera schwenkt nach rechts
+    """
+    x1, y1, x2, y2 = horse_bbox
+    h, w = prev_gray.shape[:2]
+
+    # Maske: 1 = Hintergrund (Feature-Tracking erlaubt), 0 = ausgeschlossen
+    bg_mask = np.ones((h, w), dtype=np.uint8) * 255
+    # Pferd-Bereich ausschließen (mit 20 px Puffer)
+    pad = 20
+    ex1 = max(0, x1 - pad)
+    ey1 = max(0, y1 - pad)
+    ex2 = min(w, x2 + pad)
+    ey2 = min(h, y2 + pad)
+    bg_mask[ey1:ey2, ex1:ex2] = 0
+    # Obere 15 % des Bildes ausschließen (Himmel / Hallendecke)
+    sky_cut = max(0, int(h * 0.15))
+    bg_mask[:sky_cut, :] = 0
+
+    masked_gray = cv2.bitwise_and(prev_gray, prev_gray, mask=bg_mask)
+    prev_pts = cv2.goodFeaturesToTrack(
+        masked_gray,
+        maxCorners=80,
+        qualityLevel=0.01,
+        minDistance=10,
+        mask=bg_mask,
+    )
+    if prev_pts is None or len(prev_pts) < 8:
+        return 0.0
+
+    new_pts, status, _ = cv2.calcOpticalFlowPyrLK(
+        prev_gray, curr_gray, prev_pts, None,
+        winSize=(15, 15), maxLevel=3,
+    )
+    if new_pts is None or status is None:
+        return 0.0
+
+    good = status.ravel() == 1
+    if int(np.sum(good)) < 4:
+        return 0.0
+
+    flow_x = new_pts[good, 0, 0] - prev_pts[good, 0, 0]
+    return float(np.median(flow_x))
+
 _FOCUS_LOCK_FRAME   = 5     # Nach N verarbeiteten Frames wird Fokus-ID eingefroren
 _IOU_THRESHOLD      = 0.30  # Mindest-IoU für IoU-Fallback
 _HIST_CORR_MIN      = 0.70  # Mindest-Korrelation für Histogramm-Re-Identifikation
@@ -162,6 +219,7 @@ class VideoProcessor:
         expected = max(1, total_frames // VID_STRIDE)
         facing_left_frames = 0
         facing_right_frames = 0
+        prev_gray: np.ndarray | None = None
         db_writer: _DbWriter | None = None
         if video_db_id and _DB_URL_SYNC:
             try:
@@ -187,6 +245,7 @@ class VideoProcessor:
                 frame = result.orig_img.copy()
                 if scale != 1.0:
                     frame = cv2.resize(frame, (out_w, out_h), interpolation=cv2.INTER_AREA)
+                curr_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
                 kpts: list[tuple[int, int]] | None = None
                 if result.boxes is not None and len(result.boxes):
@@ -355,7 +414,12 @@ class VideoProcessor:
                     else:
                         facing_right_frames += 1
                     kpts = pose_est.estimate(frame, (x1, y1, x2, y2), facing)
-                    gait_detector.update(kpts, (x1, y1, x2, y2), is_side_view=is_analyzable)
+                    bg_flow = (
+                        _compute_bg_flow(prev_gray, curr_gray, (x1, y1, x2, y2), out_w)
+                        if prev_gray is not None else 0.0
+                    )
+                    gait_detector.update(kpts, (x1, y1, x2, y2), is_side_view=is_analyzable,
+                                         bg_flow_px=bg_flow)
                     gait_result = gait_detector.detect()
                     if is_analyzable and gait_result.confidence > 0.40:
                         if gait_result.name == pending_gait:
@@ -386,6 +450,7 @@ class VideoProcessor:
                             logger.exception("Keypoint-DB-Write fehlgeschlagen (frame %d)", actual_frame_nr)
 
                 writer.write(frame)
+                prev_gray = curr_gray
 
                 if i % 30 == 0:
                     pct = min(int(i / expected * 88), 88)

@@ -154,11 +154,14 @@ class GaitDetector:
         # Sprint G3: normierte Δx/h-Werte für Geschwindigkeitsschätzung (~1 s Fenster)
         _speed_buf_size = max(1, int(self.effective_fps))
         self._speed_dx_norm: deque[float] = deque(maxlen=_speed_buf_size)
-        # Geschwindigkeits-Trajektorie: cx und bbox_h synchron für linreg (~2 s Fenster)
-        # Beide immer zusammen befüllt (nur is_side_view-Frames) → Index-Synchronität garantiert
+        # Geschwindigkeits-Trajektorie: cx, bbox_h und bg_flow synchron für linreg (~2 s Fenster)
+        # Alle drei immer zusammen befüllt (nur is_side_view-Frames) → Index-Synchronität garantiert
         _traj_size = max(10, int(self.effective_fps * 2))
         self._traj_cx: deque[float] = deque(maxlen=_traj_size)
         self._traj_h: deque[float] = deque(maxlen=_traj_size)
+        # Kameraschwenk-Korrektur: medianer Hintergrund-Optical-Flow (px/Frame)
+        # Positiv = Hintergrund nach rechts = Kamera schwenkt nach links
+        self._traj_bg_flow: deque[float] = deque(maxlen=_traj_size)
         # Gelenkwinkel (v0.2)
         self._hock_l: deque[float] = deque(maxlen=self.WINDOW)
         self._hock_r: deque[float] = deque(maxlen=self.WINDOW)
@@ -180,6 +183,8 @@ class GaitDetector:
         # LH Fesselgelenk X-Position (absolute Pixel) für Stride-Length-Berechnung
         # Immer synchron mit _lh befüllt → gleiche Indexierung garantiert
         self._lh_x: deque[float] = deque(maxlen=self.WINDOW)
+        # Kameraschwenk-Korrektur für Stride-Methode: bg_flow synchron zu _lh_x
+        self._lh_bg_flow: deque[float] = deque(maxlen=self.WINDOW)
         # Foot-On-Peak-Cache: von _compute_lap_df gesetzt, von _compute_speed_stride gelesen
         self._cached_lh_peaks: list[int] = []
         self._frame_count = 0
@@ -198,6 +203,7 @@ class GaitDetector:
         keypoints: list[tuple],
         bbox: tuple[int, int, int, int],
         is_side_view: bool = True,
+        bg_flow_px: float = 0.0,
     ) -> None:
         x1, y1, x2, y2 = bbox
         h = max(1, y2 - y1)
@@ -217,6 +223,7 @@ class GaitDetector:
                     ground_buf.append(val)
                     if x_deq is not None:
                         x_deq.append(float(keypoints[idx][0]))
+                        self._lh_bg_flow.append(bg_flow_px)
             if self._idx_hock_l is not None:
                 val = self._kp_y(keypoints, self._idx_hock_l, y1, h)
                 if val is not None:
@@ -234,11 +241,12 @@ class GaitDetector:
             prev_cx = self._bbox_cx[-2]
             dx_norm = abs(bbox_cx - prev_cx) / h
             self._speed_dx_norm.append(dx_norm)
-        # Geschwindigkeits-Trajektorie: cx + h synchron (nur Seitenansicht, Bbox stabil)
-        # Beide immer im gleichen Frame befüllt → Index-Synchronität garantiert
+        # Geschwindigkeits-Trajektorie: cx + h + bg_flow synchron (nur Seitenansicht, Bbox stabil)
+        # Alle drei immer im gleichen Frame befüllt → Index-Synchronität garantiert
         if is_side_view and h > 10:
             self._traj_cx.append(bbox_cx)
             self._traj_h.append(float(h))
+            self._traj_bg_flow.append(bg_flow_px)
         # Sprunggelenk-Winkel: Stifle – Hock – Fetlock (Horse-10: 17–13–14 / 17–18–19)
         if (self._idx_hock_l is not None and self._idx_stifle is not None
                 and len(keypoints) > max(self._idx_hock_l, self._idx_stifle, self._idx_lh)):
@@ -424,11 +432,26 @@ class GaitDetector:
         if len(lh_x) < max(peaks) + 1:
             return None
 
+        # Kameraschwenk-Korrektur für Stride-Methode
+        # _lh_bg_flow ist synchron zu _lh_x → gleiche Indexierung
+        bg_arr = np.array(self._lh_bg_flow)
+        has_bg = len(bg_arr) == len(lh_x)
+
         stride_px: list[float] = []
         stride_durations: list[float] = []
         for i in range(len(peaks) - 1):
-            stride_px.append(abs(lh_x[peaks[i + 1]] - lh_x[peaks[i]]))
-            stride_durations.append((peaks[i + 1] - peaks[i]) / self.effective_fps)
+            p0, p1 = peaks[i], peaks[i + 1]
+            raw_dx = lh_x[p1] - lh_x[p0]
+            if has_bg and p1 < len(bg_arr):
+                # Kumulierter Kameraschwenk über diese Stride-Dauer
+                # lh_x ist Rohpixel im Frame; Weltbewegung = raw_dx − cumsum(bg_flow über Stride)
+                # Vorzeichen: bg_flow > 0 → Hintergrund nach rechts → Kamera links → Korrektur −
+                cum_bg_stride = float(np.sum(bg_arr[p0:p1]))
+                corrected_dx = raw_dx - cum_bg_stride
+            else:
+                corrected_dx = raw_dx
+            stride_px.append(abs(corrected_dx))
+            stride_durations.append((p1 - p0) / self.effective_fps)
 
         median_stride_px = float(np.median(stride_px))
         if median_stride_px < 5:  # < 5 px = kaum Vorwärtsbewegung (Kameraschwenk o.ä.)
@@ -474,11 +497,22 @@ class GaitDetector:
         if len(cx) < min_pts or len(bh) < min_pts:
             return None
 
-        n = len(cx)
+        # Kameraschwenk-Korrektur: Kumulativer Hintergrundfluss aus cx rausrechnen
+        # Wenn Kamera nach rechts schwenkt → bg_flow < 0 → Hintergrund geht nach links
+        # → Pferd erscheint im Frame links zu gehen, ist aber in der Welt rechts
+        # → cx_welt = cx_frame − cumsum(bg_flow)
+        bg = np.array(self._traj_bg_flow)
+        if len(bg) == len(cx) and len(bg) > 0:
+            cum_bg = np.cumsum(bg)
+            cx_corrected = cx - cum_bg
+        else:
+            cx_corrected = cx
+
+        n = len(cx_corrected)
         t = np.arange(n, dtype=float)
 
         # Linearer Trend: cx(t) = slope * t + intercept
-        slope, intercept = np.polyfit(t, cx, 1)    # px / frame
+        slope, intercept = np.polyfit(t, cx_corrected, 1)    # px / frame
         speed_px_per_s = abs(slope) * self.effective_fps   # px / s
 
         # Pixelmaßstab aus medianer Bbox-Höhe
@@ -501,8 +535,8 @@ class GaitDetector:
         # Plausibilitäts-Filter: r² der Regression muss ausreichend sein (> 0,10)
         # → schlechte Regression (Pferd steht, dreht, unklar) wird verworfen
         cx_fit = slope * t + intercept
-        ss_res = float(np.sum((cx - cx_fit) ** 2))
-        ss_tot = float(np.sum((cx - np.mean(cx)) ** 2))
+        ss_res = float(np.sum((cx_corrected - cx_fit) ** 2))
+        ss_tot = float(np.sum((cx_corrected - np.mean(cx_corrected)) ** 2))
         r2 = 1.0 - ss_res / ss_tot if ss_tot > 1e-9 else 0.0
         if r2 < 0.10:
             return None
