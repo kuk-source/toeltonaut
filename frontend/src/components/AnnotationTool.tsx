@@ -140,6 +140,19 @@ function HorseKeypointSVG() {
   )
 }
 
+// ── Symmetrie-Paare ─────────────────────────────────────────────────────────
+
+const SYMMETRY_PAIRS: [string, string][] = [
+  ['Nearfrontfetlock', 'Offfrontfetlock'],
+  ['Nearfrontfoot',    'Offfrontfoot'],
+  ['Nearknee',         'Offknee'],
+  ['Nearhindfetlock',  'Offhindfetlock'],
+  ['Nearhindfoot',     'Offhindfoot'],
+  ['Nearhindhock',     'Offhindhock'],
+]
+const SYMMETRY_MAP = new Map<string, string>()
+SYMMETRY_PAIRS.forEach(([l, r]) => { SYMMETRY_MAP.set(l, r); SYMMETRY_MAP.set(r, l) })
+
 // ── Haupt-Komponente ─────────────────────────────────────────────────────────
 
 const INTRO_KEY = 'annotation-intro-seen'
@@ -153,6 +166,10 @@ export default function AnnotationTool({ jobId, onClose }: Props) {
   const [originalKeypoints, setOriginalKeypoints] = useState<KeypointEntry[]>([])
   const [activeKpIndex, setActiveKpIndex] = useState<number | null>(null)
   const [hoverKpIndex, setHoverKpIndex] = useState<number | null>(null)
+  const [ghostKeypoints, setGhostKeypoints] = useState<KeypointEntry[]>([])
+  const [showGhost, setShowGhost] = useState(true)
+  const [symmetryLock, setSymmetryLock] = useState(false)
+  const isFirstFrameLoad = useRef(true)
   const [saving, setSaving] = useState(false)
   const [saveMsg, setSaveMsg] = useState<string | null>(null)
   const [savedFlash, setSavedFlash] = useState(false)
@@ -196,6 +213,11 @@ export default function AnnotationTool({ jobId, onClose }: Props) {
   const frameUrl = getFrameUrl(jobId, frameNr)
 
   const loadKeypoints = useCallback(async (nr: number) => {
+    // Vor dem Laden neuer Keypoints: aktuelle als Ghost speichern (nicht beim ersten Frame)
+    if (!isFirstFrameLoad.current) {
+      setKeypoints(prev => { setGhostKeypoints(prev); return prev })
+    }
+    isFirstFrameLoad.current = false
     try {
       const data = await getFrameKeypoints(jobId, nr)
       setKeypoints(data.keypoints)
@@ -224,6 +246,38 @@ export default function AnnotationTool({ jobId, onClose }: Props) {
     canvas.width = imgDisplaySize.w
     canvas.height = imgDisplaySize.h
     ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+    // Ghost-Rendering: vorheriges Frame als semi-transparente Überlagerung
+    if (showGhost && ghostKeypoints.length > 0) {
+      const ghostKpMap = new Map<string, { cx: number; cy: number }>()
+      ghostKeypoints.forEach(kp => ghostKpMap.set(kp.name, {
+        cx: kp.x * imgNaturalSize.w * scaleX,
+        cy: kp.y * imgNaturalSize.h * scaleY,
+      }))
+      ctx.save()
+      ctx.globalAlpha = 0.18
+      ctx.lineWidth = 1.5
+      ctx.lineCap = 'round'
+      SKELETON_EDGES.forEach(([nameA, nameB]) => {
+        const a = ghostKpMap.get(nameA)
+        const b = ghostKpMap.get(nameB)
+        if (!a || !b) return
+        ctx.strokeStyle = '#A8D8EA'
+        ctx.beginPath()
+        ctx.moveTo(a.cx, a.cy)
+        ctx.lineTo(b.cx, b.cy)
+        ctx.stroke()
+      })
+      ghostKeypoints.forEach(kp => {
+        const pos = ghostKpMap.get(kp.name)
+        if (!pos) return
+        ctx.fillStyle = '#A8D8EA'
+        ctx.beginPath()
+        ctx.arc(pos.cx, pos.cy, 3, 0, Math.PI * 2)
+        ctx.fill()
+      })
+      ctx.restore()
+    }
 
     // Skelett-Linien (unter den Dots)
     const kpMap = new Map<string, { cx: number; cy: number }>()
@@ -308,9 +362,24 @@ export default function AnnotationTool({ jobId, onClose }: Props) {
         ctx.fillText(label, lx + 1, ly)
       }
     })
-  }, [keypoints, activeKpIndex, hoverKpIndex, imgNaturalSize, imgDisplaySize])
+  }, [keypoints, activeKpIndex, hoverKpIndex, imgNaturalSize, imgDisplaySize, ghostKeypoints, showGhost])
 
   useEffect(() => { drawCanvas() }, [drawCanvas])
+
+  const applySymmetry = useCallback((movedKpName: string, movedX: number, movedY: number) => {
+    const mirrorName = SYMMETRY_MAP.get(movedKpName)
+    if (!mirrorName) return
+    const mirroredX = 1.0 - movedX
+    const mirrorKp: KeypointEntry = { name: mirrorName, x: mirroredX, y: movedY, confidence: 2.0 }
+    setKeypoints(prev => {
+      const existing = prev.findIndex(k => k.name === mirrorName)
+      if (existing >= 0) {
+        return prev.map((k, i) => i === existing ? mirrorKp : k)
+      } else {
+        return [...prev, mirrorKp]
+      }
+    })
+  }, [])
 
   const getCanvasKpIndex = (clientX: number, clientY: number): number => {
     if (!imgNaturalSize || !imgDisplaySize) return -1
@@ -341,6 +410,7 @@ export default function AnnotationTool({ jobId, onClose }: Props) {
       pushUndo([...keypoints])
       // Bestehenden Punkt gleichen Namens ersetzen (kein Duplikat)
       setKeypoints(prev => [...prev.filter(k => k.name !== armedKpName), newKp])
+      if (symmetryLock) applySymmetry(newKp.name, newKp.x, newKp.y)
       setArmedKpName(null)
       return
     }
@@ -390,6 +460,10 @@ export default function AnnotationTool({ jobId, onClose }: Props) {
   const handleMouseUp = () => {
     if (draggingRef.current !== null && dragStartRef.current !== null) {
       pushUndo(dragStartRef.current)
+      if (symmetryLock) {
+        const draggedKp = keypoints[draggingRef.current]
+        if (draggedKp) applySymmetry(draggedKp.name, draggedKp.x, draggedKp.y)
+      }
     }
     dragStartRef.current = null
     draggingRef.current = null
@@ -512,6 +586,16 @@ export default function AnnotationTool({ jobId, onClose }: Props) {
           e.preventDefault()
           if (e.shiftKey) goToFrame(frameNr + FRAME_STEP)
           else goToFrame(frameNr + 1)
+          return
+        }
+        if (e.key === 'g' || e.key === 'G') {
+          e.preventDefault()
+          setShowGhost(v => !v)
+          return
+        }
+        if (e.key === 's' || e.key === 'S') {
+          e.preventDefault()
+          setSymmetryLock(v => !v)
           return
         }
       }
@@ -876,6 +960,8 @@ export default function AnnotationTool({ jobId, onClose }: Props) {
                   ['Tab', 'Nächster unsicherer KP'],
                   ['Ctrl+Z / Y', 'Rückgängig / Wdh.'],
                   ['Del', 'KP entfernen'],
+                  ['G', 'Ghost ein/aus'],
+                  ['S', 'Symmetrie an/aus'],
                   ['Esc', 'Abbrechen'],
                 ].map(([key, desc]) => (
                   <div key={key} className="flex items-center justify-between text-[9px] text-geysirweiss/25">
@@ -888,6 +974,33 @@ export default function AnnotationTool({ jobId, onClose }: Props) {
 
             {/* Aktionen */}
             <div className="p-4 border-t border-geysirweiss/10 space-y-2 shrink-0">
+              {/* Ghost + Symmetrie Toggles */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowGhost(v => !v)}
+                  title="Ghost-Overlay ein/aus (G)"
+                  className={[
+                    'flex-1 py-1.5 rounded-xl border text-xs transition-colors',
+                    showGhost
+                      ? 'border-gletscherblau/50 text-gletscherblau bg-islandblau/20'
+                      : 'border-geysirweiss/20 text-geysirweiss/40 hover:border-geysirweiss/40',
+                  ].join(' ')}
+                >
+                  Ghost {showGhost ? 'AN' : 'AUS'}
+                </button>
+                <button
+                  onClick={() => setSymmetryLock(v => !v)}
+                  title="Symmetrie: linke/rechte Seite spiegeln (S)"
+                  className={[
+                    'flex-1 py-1.5 rounded-xl border text-xs transition-colors',
+                    symmetryLock
+                      ? 'border-islandblau/60 text-gletscherblau bg-islandblau/20'
+                      : 'border-geysirweiss/20 text-geysirweiss/40 hover:border-geysirweiss/40',
+                  ].join(' ')}
+                >
+                  &#8644; Symm. {symmetryLock ? 'AN' : 'AUS'}
+                </button>
+              </div>
               <button
                 onClick={() => void handleSave()}
                 disabled={saving || keypoints.length === 0}
