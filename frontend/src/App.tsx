@@ -106,6 +106,15 @@ export default function App() {
             </div>
           </button>
           <div className="ml-auto flex items-center gap-3">
+            <a
+              href="/docs/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs px-3 py-1.5 rounded-lg text-geysirweiss/25 hover:text-gletscherblau hover:bg-lava/60 transition-colors"
+              title="Dokumentation öffnen"
+            >
+              Docs
+            </a>
             <button
               onClick={() => setScreen(s => s === 'admin' ? 'home' : 'admin')}
               className={[

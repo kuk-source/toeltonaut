@@ -15,6 +15,11 @@ export default defineConfig({
         // wenn der Backend-Container neustartet.
         agent: new http.Agent({ keepAlive: false }),
       },
+      '/docs': {
+        target: apiTarget,
+        changeOrigin: true,
+        agent: new http.Agent({ keepAlive: false }),
+      },
     },
   },
 })

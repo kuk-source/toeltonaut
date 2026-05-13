@@ -22,6 +22,7 @@ services:
     volumes:
       - toeltonaut_data:/data
       - ./backend/config.yaml:/app/config.yaml:ro
+      - ./docs:/app/docs:ro
     environment:
       - UPLOADS_DIR=/data/uploads
       - OUTPUTS_DIR=/data/outputs

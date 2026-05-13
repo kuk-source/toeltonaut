@@ -13,9 +13,10 @@ from pathlib import Path
 from typing import List, Optional
 
 import aiofiles
-from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, HTTPException, UploadFile, status
+from fastapi import BackgroundTasks, Body, Depends, FastAPI, File, Form, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi.staticfiles import StaticFiles
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -45,6 +46,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Dokumentation als statische Dateien: /docs/* → docs/-Ordner im Projekt
+_DOCS_CANDIDATES = [
+    Path(os.getenv("DOCS_DIR", "")),
+    Path(__file__).parent.parent.parent / "docs",   # dev: Töltonaut/docs
+    Path("/app/docs"),                               # Docker-Volume-Mount
+]
+_DOCS_DIR = next((p for p in _DOCS_CANDIDATES if p and p.is_dir()), None)
+if _DOCS_DIR:
+    app.mount("/docs", StaticFiles(directory=str(_DOCS_DIR)), name="docs")
 
 jobs: dict[str, JobState] = {}
 _lock = threading.Lock()
@@ -1454,20 +1465,58 @@ async def export_metrics_csv(
 @app.post("/api/job/{job_id}/reanalyse")
 async def reanalyse_job(
     job_id: str,
+    body: dict = Body({}),
+    background_tasks: BackgroundTasks = ...,
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    """Führt Gangart-Erkennung auf den bereits gespeicherten Keypoints erneut aus.
-    Nützlich nach Aktivierung eines neuen Modells oder nach Algorithmus-Verbesserungen.
-    Erfordert kein Re-Upload (Original-Datei wurde nach Verarbeitung gelöscht)."""
+    """Neuanalyse in zwei Modi:
+    - mode='gait-only' (Standard): Gangart-Erkennung auf gespeicherten Keypoints. ~2 Sek.
+    - mode='full': Video komplett neu verarbeiten (YOLOv8 + MMPose). Dauert Minuten."""
     import cv2 as _cv2  # type: ignore
     from collections import Counter as _Counter
     from .mmpose_estimator import MMPosePoseEstimator
     from .gait_detector import GaitDetector
 
+    mode = body.get("mode", "gait-only")
     _require_job_id(job_id)
     with _lock:
         job = jobs.get(job_id)
-    if not job or job.status != "done":
+    if not job or job.status not in ("done", "expired"):
+        raise HTTPException(404, "Job nicht gefunden oder noch nicht abgeschlossen.")
+
+    # ── Vollständige Neuanalyse ─────────────────────────────────────────────
+    if mode == "full":
+        import shutil as _shutil
+        if not job.output_path or not Path(job.output_path).exists():
+            raise HTTPException(
+                404,
+                "Ausgabedatei nicht mehr verfügbar – bitte Video neu hochladen.",
+            )
+        # Ausgabe-MP4 als temporäre Eingabe kopieren (Input und Output wären sonst identisch)
+        tmp_input = str(UPLOADS_DIR / f"{job_id}_reanalyse.mp4")
+        _shutil.copy2(job.output_path, tmp_input)
+
+        # Alte Frame-/Keypoint-Daten löschen (werden beim neuen Durchlauf neu angelegt)
+        frame_ids_res = await db.execute(select(Frame.id).where(Frame.video_id == job_id))
+        frame_ids = [r[0] for r in frame_ids_res.all()]
+        if frame_ids:
+            await db.execute(delete(Keypoint).where(Keypoint.frame_id.in_(frame_ids)))
+            await db.execute(delete(Frame).where(Frame.id.in_(frame_ids)))
+            await db.commit()
+
+        with _lock:
+            jobs[job_id].status = "queued"
+            jobs[job_id].progress = 0
+            jobs[job_id].message = "Vollständige Neuanalyse läuft…"
+            jobs[job_id].input_path = tmp_input
+
+        background_tasks.add_task(
+            lambda: threading.Thread(target=_run_processing, args=(job_id,), daemon=True).start()
+        )
+        return {"job_id": job_id, "mode": "full", "status": "queued"}
+
+    # ── Schnelle Neuanalyse (nur Gangart auf gespeicherten Keypoints) ───────
+    if job.status != "done":
         raise HTTPException(404, "Job nicht gefunden oder noch nicht abgeschlossen.")
 
     frames_result = await db.execute(

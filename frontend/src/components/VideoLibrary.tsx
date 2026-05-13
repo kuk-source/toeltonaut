@@ -5,6 +5,7 @@ import type { VideoEntry } from '../types'
 import StatsDashboard from './StatsDashboard'
 import AnnotationTool from './AnnotationTool'
 import MetadataEditModal from './MetadataEditModal'
+import ReanalyseModal from './ReanalyseModal'
 
 const POLL_INTERVAL = 30_000
 
@@ -100,6 +101,7 @@ export default function VideoLibrary({ onSelect }: Props) {
   const [resetErrorId, setResetErrorId]       = useState<string | null>(null)
   const [reanalysingId, setReanalysingId]     = useState<string | null>(null)
   const [reanalyseOkId, setReanalyseOkId]     = useState<string | null>(null)
+  const [reanalyseModalId, setReanalyseModalId] = useState<string | null>(null)
 
   const [gaitFilter,   setGaitFilter]   = useState<GaitFilter>('Alle')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('Alle')
@@ -156,10 +158,11 @@ export default function VideoLibrary({ onSelect }: Props) {
     }
   }
 
-  const handleReanalyse = async (jobId: string) => {
+  const handleReanalyse = async (jobId: string, mode: 'gait-only' | 'full') => {
+    setReanalyseModalId(null)
     setReanalysingId(jobId)
     try {
-      await reanalyseJob(jobId)
+      await reanalyseJob(jobId, mode)
       setReanalyseOkId(jobId)
       setTimeout(() => { setReanalyseOkId(null); void fetchVideos() }, 3000)
     } catch { /* Fehler still ignorieren – Button wird einfach wieder aktiv */ }
@@ -410,9 +413,8 @@ export default function VideoLibrary({ onSelect }: Props) {
                     <span className="text-xs text-nordlicht px-1">{t('library.reanalyseOk')}</span>
                   ) : (
                     <button
-                      onClick={(e) => { e.stopPropagation(); void handleReanalyse(entry.job_id) }}
+                      onClick={(e) => { e.stopPropagation(); setReanalyseModalId(entry.job_id) }}
                       className="text-xs px-3 py-1.5 rounded-lg border border-geysirweiss/15 text-geysirweiss/40 hover:text-gletscherblau hover:border-gletscherblau/40 transition-colors"
-                      title="Gangart-Erkennung auf vorhandenen Keypoints erneut ausführen (kein Re-Upload)"
                     >
                       {t('library.reanalyse')}
                     </button>
@@ -551,6 +553,12 @@ export default function VideoLibrary({ onSelect }: Props) {
 
     {annotatingId && (
       <AnnotationTool jobId={annotatingId} onClose={() => setAnnotatingId(null)} />
+    )}
+    {reanalyseModalId && (
+      <ReanalyseModal
+        onClose={() => setReanalyseModalId(null)}
+        onConfirm={(mode) => void handleReanalyse(reanalyseModalId, mode)}
+      />
     )}
     {editingId && (() => {
       const entry = videos.find(e => e.job_id === editingId)

@@ -281,7 +281,7 @@ export async function getTrainingStatus(jobId: number): Promise<TrainingStatusRe
   return res.json() as Promise<TrainingStatusResponse>
 }
 
-export async function reanalyseJob(jobId: string): Promise<{
+export async function reanalyseJob(jobId: string, mode: 'gait-only' | 'full' = 'gait-only'): Promise<{
   job_id: string
   updated_frames: number
   total_frames: number
@@ -289,7 +289,8 @@ export async function reanalyseJob(jobId: string): Promise<{
 }> {
   const res = await fetch(`${BASE}/job/${jobId}/reanalyse`, {
     method: 'POST',
-    headers: authHeader() as Record<string, string>,
+    headers: { ...authHeader() as Record<string, string>, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ mode }),
   })
   if (!res.ok) {
     const err = await res.json().catch(() => ({})) as { detail?: string }
