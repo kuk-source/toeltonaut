@@ -86,6 +86,10 @@
       <div class="sidebar-label">Versionen</div>
       <a href="#versions">v0.1 → v0.3</a>
     </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Entscheidungen</div>
+      <a href="#why-algorithms">Algorithmus-Entscheidungen</a>
+    </div>
   </aside>
 
   <main class="content">
@@ -635,6 +639,243 @@ Score = 7,0<br>
           <p style="font-size:.82rem;color:var(--muted)">Custom-Training auf annotierten Islandpferd-Turnier-Videos mit allen 31 KP. Bi-LSTM oder XGBoost auf Keypoint-Zeitreihen trainiert (bis 91% Genauigkeit in IMU-Studien). Likelihood-Filterung (refineDLC) + Schrittzyklusnormierung (AutoGaitA).</p>
         </div>
       </div>
+    </section>
+
+    <!-- ── WHY ALGORITHMS ───────────────────────── -->
+    <section id="why-algorithms" style="margin-bottom:2rem">
+      <div class="section-title">Algorithmus-Entscheidungen: Warum was?</div>
+      <p style="font-size:.85rem;color:var(--muted);margin-bottom:1.25rem">
+        Jede technische Wahl in Töltonaut hat einen konkreten Grund – Lizenz, Hardware-Einschränkung, Datenverfügbarkeit
+        oder biomechanische Genauigkeit. Diese Sektion erklärt das <em>Warum</em> hinter den Entscheidungen.
+      </p>
+
+      <!-- 1 – YOLOv8n -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;margin-bottom:1rem">
+        <div style="font-weight:700;color:var(--green);font-size:.9rem;margin-bottom:.4rem">① Pferdeerkennung — YOLOv8n</div>
+        <p style="font-size:.83rem;color:var(--muted);margin-bottom:.6rem">
+          <strong style="color:var(--white)">Warum YOLOv8n?</strong>
+          Kein anderes open-source Modell bietet gleichzeitig Echtzeit-Inferenz auf CPU, Horse-Class (Klasse 17 im COCO-Datensatz)
+          out-of-the-box, und AGPL-3.0-Lizenzkompatibilität. AGPL-3.0 ist Pflicht, weil Ultralytics YOLOv8 AGPL-3.0 ist
+          und das Gesamtprojekt als Derivative Work gilt. Alternativen wie RT-DETR oder DINO sind auf CPU deutlich langsamer
+          und setzen voraus, dass Horse-10-Gewichte separat trainiert werden.
+        </p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:.6rem">
+          <div>
+            <p style="font-size:.8rem;color:var(--muted);margin-bottom:.3rem"><strong style="color:var(--white)">Was:</strong></p>
+            <ul style="font-size:.8rem;color:var(--muted);margin:0;padding-left:1.2rem;line-height:1.7">
+              <li>Single-shot object detector</li>
+              <li><code>vid_stride=2</code> halbiert Verarbeitungszeit ohne merklichen Qualitätsverlust</li>
+              <li><code>conf=0.3</code> verhindert False Negatives bei schlechten Lichtverhältnissen</li>
+              <li><code>device="cpu"</code> – GTX 1070 (sm_61) ist mit PyTorch 2.1+ inkompatibel</li>
+            </ul>
+          </div>
+          <div>
+            <p style="font-size:.8rem;color:var(--muted);margin-bottom:.3rem"><strong style="color:var(--white)">Fokus-Pferd-Selektion:</strong></p>
+            <ul style="font-size:.8rem;color:var(--muted);margin:0;padding-left:1.2rem;line-height:1.7">
+              <li>Größte Bounding Box im ersten Frame</li>
+              <li>8-Frame-Hysterese verhindert ungewollten Wechsel</li>
+              <li>IOU-Tracking + Histogramm-Reidentifikation bei Okklusion</li>
+            </ul>
+          </div>
+        </div>
+        <p style="font-size:.76rem;color:var(--muted)">
+          Lizenz: Ultralytics YOLOv8 AGPL-3.0 · Horse-Class 17 im COCO-Standard seit 2014 · CPU-only: ~6 fps bei 4K/60fps Input (akzeptabel für Batch-Verarbeitung)
+        </p>
+      </div>
+
+      <!-- 2 – MMPose HRNet-W32 -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;margin-bottom:1rem">
+        <div style="font-weight:700;color:var(--primary);font-size:.9rem;margin-bottom:.4rem">② Pose-Estimation — MMPose HRNet-W32 + Horse-10</div>
+        <p style="font-size:.83rem;color:var(--muted);margin-bottom:.6rem">
+          <strong style="color:var(--white)">Warum HRNet-W32 auf Horse-10?</strong>
+          Horse-10 (Oxford VGG, CC BY 4.0) ist das einzige öffentliche Datensatz mit 22 Pferde-Keypoints,
+          die explizit Fesselgelenke, Karpus, Sprunggelenk und Hüfte enthalten — genau die Gelenke, die für
+          LAP und Duty Factor benötigt werden. MMPose HRNet-W32 erreicht mAP ≈ 88 auf Horse-10 <em>ohne eigenes Training</em>.
+          DeepLabCut SuperAnimal-Quadruped bietet zwar 39 Keypoints, gibt die Fesselgelenke aber nicht als primäre
+          Ausgabe aus. YOLOv8-pose ist ausschließlich auf menschliche Körper vortrainiert.
+        </p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+          <div>
+            <p style="font-size:.8rem;color:var(--muted);margin-bottom:.3rem"><strong style="color:var(--white)">Was:</strong></p>
+            <ul style="font-size:.8rem;color:var(--muted);margin:0;padding-left:1.2rem;line-height:1.7">
+              <li>High-Resolution-Net mit 32 Kanälen</li>
+              <li>4×4 Subpixel-Heatmaps pro Keypoint</li>
+              <li>Konfidenz-Score pro KP (Likelihood-Filter möglich)</li>
+              <li>Apache 2.0 – kompatibel mit AGPL-3.0 des Gesamtprojekts</li>
+            </ul>
+          </div>
+          <div>
+            <p style="font-size:.8rem;color:var(--muted);margin-bottom:.3rem"><strong style="color:var(--white)">Datensatz-Wahl:</strong></p>
+            <ul style="font-size:.8rem;color:var(--muted);margin:0;padding-left:1.2rem;line-height:1.7">
+              <li>Horse-10 CC BY 4.0 – frei nutzbar</li>
+              <li>AP-10K CC BY-NC 4.0 – nur für Nicht-Kommerzialles Training</li>
+              <li>Animal Kingdom, EquineTrack: Anfrage/Forschungslizenz – ausgeschlossen</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3 – LAP + DF -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;margin-bottom:1rem">
+        <div style="font-weight:700;color:var(--green);font-size:.9rem;margin-bottom:.4rem">③ Gangart-Klassifikation — LAP + Duty Factor (biomechanisch, regelbasiert)</div>
+        <p style="font-size:.83rem;color:var(--muted);margin-bottom:.6rem">
+          <strong style="color:var(--white)">Warum regelbasiert statt ML?</strong>
+          Es existieren keine öffentlichen Tölt- oder Rennpass-Videos für Training —
+          das ist die kritischste Datenlücke des gesamten Projekts. Ein ML-Klassifikator (z. B. Bi-LSTM)
+          würde auf Schritt/Trab/Galopp-Daten aus generischen Datasets trainieren und auf Islandpferde-Gangarten
+          schlecht generalisieren. LAP und DF sind aus der FEIF-Biomechanik-Literatur (AJVR 2006, JEB) validiert
+          und entsprechen direkt den Kriterien, nach denen FEIF-Richter bewerten. Ein ML-Klassifikator ist für
+          v0.3 geplant, sobald ausreichend nutzer-annotierte Videos vorliegen.
+        </p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:.6rem">
+          <div>
+            <p style="font-size:.8rem;color:var(--muted);margin-bottom:.3rem"><strong style="color:var(--white)">DF-Perzentil-Methode:</strong></p>
+            <div class="formula-box" style="font-size:.77rem">
+threshold = p15 + 0.55 × (p90 − p15)
+            </div>
+            <p style="font-size:.77rem;color:var(--muted);margin-top:.4rem">
+              Adaptiver Schwellwert statt fixer Grenze — reagiert auf Tölt mit kleiner Hubbewegung
+              und verhindert Fehlklassifikation als Schritt bei ruhigem Tölt.
+            </p>
+          </div>
+          <div>
+            <p style="font-size:.8rem;color:var(--muted);margin-bottom:.3rem"><strong style="color:var(--white)">Schwebephase-Erkennung:</strong></p>
+            <div class="formula-box" style="font-size:.77rem">
+suspension = alle 4 DF_j &lt; 50% gleichzeitig
+            </div>
+            <p style="font-size:.77rem;color:var(--muted);margin-top:.4rem">
+              Tölt OHNE Schwebephase, Rennpass MIT Schwebephase — trotz ähnlichem LAP (~25% vs. ~0%).
+              DF ist das entscheidende Trennmerkmal.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4 – Geschwindigkeit -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;margin-bottom:1rem">
+        <div style="font-weight:700;color:var(--white);font-size:.9rem;margin-bottom:.4rem">④ Geschwindigkeit — Stride-Length × Stride-Frequency</div>
+        <p style="font-size:.83rem;color:var(--muted);margin-bottom:.6rem">
+          <strong style="color:var(--white)">Warum stride-basiert?</strong>
+          Die Stride-basierte Methode misst tatsächliche Pferdbewegung über Grund, nicht Kamerabewegung.
+          GPS und IMU sind bei Nutzer-Videos nicht verfügbar. Pixel-Verschiebung des Bbox-Zentrums allein
+          ist bei Kameraschwenk unzuverlässig und erzeugt systematisch fehlerhafte Werte (~2,2 km/h Artefakt).
+        </p>
+        <div class="formula-box" style="margin-bottom:.6rem">
+v = stride_px / (withers_y_px − hoof_y_px) × stockmass_m / stride_duration_s
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+          <div>
+            <p style="font-size:.8rem;color:var(--muted);margin-bottom:.3rem"><strong style="color:var(--white)">Skalierung:</strong></p>
+            <ul style="font-size:.8rem;color:var(--muted);margin:0;padding-left:1.2rem;line-height:1.7">
+              <li>Withers-to-Hoof-Distanz stabiler als Bbox-Höhe</li>
+              <li>±4–7% Fehler (vs. ±10–15% bei Bbox-Höhe laut Literatur)</li>
+              <li>Stockmaß vom Nutzer oder Schätzung (Standard 1,38 m)</li>
+            </ul>
+          </div>
+          <div>
+            <p style="font-size:.8rem;color:var(--muted);margin-bottom:.3rem"><strong style="color:var(--white)">Fallback:</strong></p>
+            <ul style="font-size:.8rem;color:var(--muted);margin:0;padding-left:1.2rem;line-height:1.7">
+              <li>Lineare Regression auf cx-Trajektorie</li>
+              <li>Nur verwendet wenn R² ≥ 0,65</li>
+              <li>stride_px = Δx des LH-Fesselgelenks zwischen zwei Foot-On-Events</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5 – Kameraschwenk -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;margin-bottom:1rem">
+        <div style="font-weight:700;color:var(--primary);font-size:.9rem;margin-bottom:.4rem">⑤ Kameraschwenk-Korrektur — Optischer Fluss (Hintergrundpixel)</div>
+        <p style="font-size:.83rem;color:var(--muted);margin-bottom:.6rem">
+          <strong style="color:var(--white)">Warum optischer Fluss?</strong>
+          Wenn die Kamera dem Pferd folgt, bewegen sich Hintergrundpixel entgegen der Kamerabewegung.
+          Ohne Korrektur misst jede Geschwindigkeitsberechnung Kamera-Jitter statt echte Pferdebewegung
+          — das erzeugt einen systematischen ~2,2 km/h Fehler bei typischem Schwenktempo.
+        </p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:.6rem">
+          <div>
+            <p style="font-size:.8rem;color:var(--muted);margin-bottom:.3rem"><strong style="color:var(--white)">Methode:</strong></p>
+            <ul style="font-size:.8rem;color:var(--muted);margin:0;padding-left:1.2rem;line-height:1.7">
+              <li><code>cv2.goodFeaturesToTrack</code> auf Hintergrundpixeln</li>
+              <li>Pferd-Bbox + 20 px Padding ausgeschlossen</li>
+              <li>Himmelbereich (obere 15%) ausgeschlossen (Wolkenbewegung)</li>
+              <li><code>cv2.calcOpticalFlowPyrLK</code> für Punkt-Tracking</li>
+              <li>Medianer horizontaler Fluss → kumuliert über Stride-Dauer → abgezogen</li>
+            </ul>
+          </div>
+          <div>
+            <p style="font-size:.8rem;color:var(--muted);margin-bottom:.3rem"><strong style="color:var(--white)">Vorzeichen-Konvention:</strong></p>
+            <div class="formula-box" style="font-size:.77rem">
+bg_flow &gt; 0 → Hintergrund nach rechts<br>
+→ Kamera schwenkt nach links<br>
+→ Korrektur ist negativ
+            </div>
+            <p style="font-size:.77rem;color:var(--muted);margin-top:.4rem">
+              Konsistente Vorzeichen-Konvention ist kritisch — Vorzeichenfehler würde Schwenk
+              addieren statt subtrahieren und den Fehler verdoppeln.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 6 – requestVideoFrameCallback -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;margin-bottom:1rem">
+        <div style="font-weight:700;color:var(--green);font-size:.9rem;margin-bottom:.4rem">⑥ Frame-genaues Rendering — requestVideoFrameCallback</div>
+        <p style="font-size:.83rem;color:var(--muted);margin-bottom:.6rem">
+          <strong style="color:var(--white)">Warum nicht requestAnimationFrame?</strong>
+          <code>requestAnimationFrame</code> + <code>currentTime</code> hat eine Verzögerung von 1–2 vsync-Zyklen,
+          weil der Browser das nächste dekodierte Frame erst nach dem Compositor-Commit sieht. Das bedeutet:
+          der Overlay zeigt Keypoints des <em>vorherigen</em> Frames, während das Video bereits das nächste
+          anzeigt — sichtbares Ghosting bei 30 fps.
+        </p>
+        <div class="formula-box" style="margin-bottom:.6rem">
+requestVideoFrameCallback(cb)<br>
+<span style="color:#666">→ cb(now, metadata)  // metadata.mediaTime = präzise PTS des angezeigten Frames</span><br>
+<span style="color:#666">→ Frame-Overlay liegt exakt auf dem dekodiertem Frame, kein Ghosting</span>
+        </div>
+        <p style="font-size:.76rem;color:var(--muted)">
+          <code>requestVideoFrameCallback</code> feuert exakt wenn der Browser ein Frame an den Compositor sendet.
+          <code>metadata.mediaTime</code> ist die präzise Presentation-Timestamp (PTS) des angezeigten Frames —
+          damit lässt sich der korrekte Keypoint-Datensatz aus dem Backend-Array per binärer Suche abgreifen.
+          Browser-Support: Chrome 83+, Firefox 132+, Safari 15.4+.
+        </p>
+      </div>
+
+      <!-- 7 – Maßstabsbestimmung -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;margin-bottom:1rem">
+        <div style="font-weight:700;color:var(--primary);font-size:.9rem;margin-bottom:.4rem">⑦ Maßstabsbestimmung — Withers-to-Hoof-Contact</div>
+        <p style="font-size:.83rem;color:var(--muted);margin-bottom:.6rem">
+          <strong style="color:var(--white)">Warum nicht Metric-Depth-Modelle?</strong>
+          Depth Pro, UniDepth und Metric3D liefern zwar absolute Meter-Tiefen, benötigen aber auf CPU-only-Hardware
+          (GTX 1070) 5–30 Sekunden pro Frame — bei 30 fps und einem 60 s Video wären das 30–90 Minuten
+          Verarbeitungszeit allein für die Tiefenschätzung. Die Withers-to-Hoof-Contact-Methode ist aus der
+          equinen Biomechanik-Literatur (EquiMoves, Groundline-Estimation-Paper) validiert und benötigt nur den
+          Stockmaß-Wert, den jeder Pferdebesitzer kennt.
+        </p>
+        <div class="formula-box" style="margin-bottom:.6rem">
+scale_px_per_m = (max(hoof_y_px) − withers_y_px) / stockmass_m<br>
+<span style="color:#666">Median über 5 aufeinanderfolgende Frames für Stabilität</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+          <div>
+            <p style="font-size:.8rem;color:var(--muted);margin-bottom:.3rem"><strong style="color:var(--white)">Genauigkeit:</strong></p>
+            <ul style="font-size:.8rem;color:var(--muted);margin:0;padding-left:1.2rem;line-height:1.7">
+              <li>Withers-to-Hoof: ±4–7% Fehler</li>
+              <li>Bbox-Höhe allein: ±10–15% Fehler</li>
+              <li>Huf-Y bei Bodenkontakt stabiler als obere Bbox-Grenze (Kopfhaltung variiert)</li>
+            </ul>
+          </div>
+          <div>
+            <p style="font-size:.8rem;color:var(--muted);margin-bottom:.3rem"><strong style="color:var(--white)">Eingabe:</strong></p>
+            <ul style="font-size:.8rem;color:var(--muted);margin:0;padding-left:1.2rem;line-height:1.7">
+              <li>Stockmaß vom Nutzer (Upload-Metadaten)</li>
+              <li>Fallback: Rassestandard Islandpferd 1,38 m</li>
+              <li>Widerrist-KP idx 6, Huf-KP idx 8/10 (je nach Standbein)</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
     </section>
 
   </main>
