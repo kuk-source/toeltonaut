@@ -140,6 +140,15 @@ function HorseKeypointSVG() {
   )
 }
 
+// ── Konfidenz-Farbe ─────────────────────────────────────────────────────────
+
+function keypointColor(conf: number, isManual: boolean): string {
+  if (isManual) return '#A8D8EA'   // Gletscherblau – manuell gesetzt
+  if (conf >= 0.65) return '#00C896' // Nordlicht-Grün – sicher
+  if (conf >= 0.30) return '#F5A623' // Orange – mittlere Sicherheit
+  return '#C8102E'                   // Flaggenrot – unsicher
+}
+
 // ── Symmetrie-Paare ─────────────────────────────────────────────────────────
 
 const SYMMETRY_PAIRS: [string, string][] = [
@@ -182,6 +191,9 @@ export default function AnnotationTool({ jobId, onClose }: Props) {
   const [pan,  setPan]  = useState({ x: 0, y: 0 })
   const [armedKpName, setArmedKpName] = useState<string | null>(null)
 
+  // Active-Learning: verfolge den unsichersten gesehenen Frame
+  const [lowestConfFrame, setLowestConfFrame] = useState<{ nr: number; avg: number } | null>(null)
+
   const canvasRef    = useRef<HTMLCanvasElement>(null)
   const imgRef       = useRef<HTMLImageElement>(null)
   const viewportRef  = useRef<HTMLDivElement>(null)
@@ -222,6 +234,13 @@ export default function AnnotationTool({ jobId, onClose }: Props) {
       const data = await getFrameKeypoints(jobId, nr)
       setKeypoints(data.keypoints)
       setOriginalKeypoints(data.keypoints)
+
+      // Active-Learning: durchschnittliche Konfidenz berechnen, unsichersten Frame merken
+      const real = data.keypoints.filter(kp => kp.confidence < 2.0)
+      if (real.length > 0) {
+        const avg = real.reduce((sum, kp) => sum + kp.confidence, 0) / real.length
+        setLowestConfFrame(prev => (!prev || avg < prev.avg) ? { nr, avg } : prev)
+      }
     } catch {
       setKeypoints([])
       setOriginalKeypoints([])
@@ -280,19 +299,24 @@ export default function AnnotationTool({ jobId, onClose }: Props) {
     }
 
     // Skelett-Linien (unter den Dots)
-    const kpMap = new Map<string, { cx: number; cy: number }>()
+    const kpMap = new Map<string, { cx: number; cy: number; conf: number; isManual: boolean }>()
     keypoints.forEach(kp => kpMap.set(kp.name, {
       cx: kp.x * imgNaturalSize.w * scaleX,
       cy: kp.y * imgNaturalSize.h * scaleY,
+      conf: kp.confidence,
+      isManual: kp.confidence >= 2.0,
     }))
     ctx.save()
     ctx.lineWidth = 2
     ctx.lineCap = 'round'
-    SKELETON_EDGES.forEach(([nameA, nameB, color]) => {
+    SKELETON_EDGES.forEach(([nameA, nameB]) => {
       const a = kpMap.get(nameA)
       const b = kpMap.get(nameB)
       if (!a || !b) return
-      ctx.strokeStyle = color
+      // Linienfarbe: Keypoint mit niedrigerer Konfidenz bestimmt die Farbe
+      const lowerConf = Math.min(a.conf, b.conf)
+      const eitherManual = a.isManual && b.isManual
+      ctx.strokeStyle = keypointColor(lowerConf, eitherManual) + '99' // 60% Opazität
       ctx.beginPath()
       ctx.moveTo(a.cx, a.cy)
       ctx.lineTo(b.cx, b.cy)
@@ -306,9 +330,9 @@ export default function AnnotationTool({ jobId, onClose }: Props) {
       const isActive = i === activeKpIndex
       const isHover = i === hoverKpIndex
       const r = isActive || isHover ? RADIUS_ACTIVE : RADIUS_NORMAL
-      const color = KEYPOINT_COLORS[kp.name] ?? DEFAULT_COLOR
       const isManual  = kp.confidence >= 2.0
-      const isLowConf = !isManual && kp.confidence < 0.5
+      const isLowConf = !isManual && kp.confidence < 0.3
+      const color = keypointColor(kp.confidence, isManual)
 
       ctx.shadowColor = 'rgba(0,0,0,0.7)'
       ctx.shadowBlur = 5
@@ -336,14 +360,14 @@ export default function AnnotationTool({ jobId, onClose }: Props) {
 
       ctx.beginPath()
       ctx.arc(cx, cy, r, 0, Math.PI * 2)
-      ctx.fillStyle = isLowConf ? color.replace(')', ',0.55)').replace('rgb', 'rgba') : color
-      ctx.globalAlpha = isLowConf ? 0.65 : 1.0
+      ctx.fillStyle = color
+      ctx.globalAlpha = isLowConf ? 0.70 : 1.0
       ctx.fill()
       ctx.globalAlpha = 1.0
 
       ctx.beginPath()
       ctx.arc(cx, cy, r, 0, Math.PI * 2)
-      ctx.strokeStyle = isManual ? '#FFD700' : isLowConf ? 'rgba(200,16,46,0.5)' : 'rgba(0,0,0,0.4)'
+      ctx.strokeStyle = isManual ? '#FFD700' : 'rgba(0,0,0,0.4)'
       ctx.lineWidth = isManual ? 2.5 : 1
       ctx.stroke()
 
@@ -944,13 +968,23 @@ export default function AnnotationTool({ jobId, onClose }: Props) {
 
             {/* Legende */}
             <div className="px-4 py-2 border-t border-geysirweiss/10 space-y-1">
-              <div className="flex items-center gap-1.5 text-[10px] text-geysirweiss/30">
-                <span className="w-2 h-2 rounded-full bg-nordlicht inline-block" />
-                {t('annotation.legendFetlockBadge')}
+              {/* Konfidenz-Farbkodierung */}
+              <div className="text-[9px] font-semibold uppercase tracking-wider text-geysirweiss/25 mb-1">Konfidenz</div>
+              <div className="flex items-center gap-1.5 text-[10px] text-geysirweiss/50">
+                <span className="w-2 h-2 rounded-full inline-block shrink-0" style={{ backgroundColor: '#00C896' }} />
+                <span>conf ≥ 0.65 – sicher</span>
               </div>
-              <div className="flex items-center gap-1.5 text-[10px] text-geysirweiss/30">
-                <span className="text-[#FFD700]">★</span>
-                {t('annotation.legendManual')}
+              <div className="flex items-center gap-1.5 text-[10px] text-geysirweiss/50">
+                <span className="w-2 h-2 rounded-full inline-block shrink-0" style={{ backgroundColor: '#F5A623' }} />
+                <span>conf 0.30–0.64 – prüfen</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-[10px] text-geysirweiss/50">
+                <span className="w-2 h-2 rounded-full inline-block shrink-0" style={{ backgroundColor: '#C8102E' }} />
+                <span>conf &lt; 0.30 – unsicher</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-[10px] text-geysirweiss/50">
+                <span className="w-2 h-2 rounded-full inline-block shrink-0" style={{ backgroundColor: '#A8D8EA' }} />
+                <span>manuell gesetzt</span>
               </div>
               <div className="mt-2 pt-2 border-t border-geysirweiss/10 space-y-1">
                 <div className="text-[9px] font-semibold uppercase tracking-wider text-geysirweiss/25 mb-1">Tastatur</div>
@@ -974,6 +1008,17 @@ export default function AnnotationTool({ jobId, onClose }: Props) {
 
             {/* Aktionen */}
             <div className="p-4 border-t border-geysirweiss/10 space-y-2 shrink-0">
+              {/* Active-Learning: Unsichersten Frame anspringen */}
+              {lowestConfFrame !== null && lowestConfFrame.nr !== frameNr && (
+                <button
+                  onClick={() => goToFrame(lowestConfFrame.nr)}
+                  title={`Frame ${lowestConfFrame.nr} – Ø ${Math.round(lowestConfFrame.avg * 100)}% Konfidenz`}
+                  className="w-full py-1.5 rounded-xl border border-flaggenrot/40 text-flaggenrot/80 hover:border-flaggenrot hover:text-flaggenrot hover:bg-flaggenrot/10 text-xs transition-colors flex items-center justify-center gap-1.5"
+                >
+                  <span className="w-2 h-2 rounded-full inline-block shrink-0" style={{ backgroundColor: '#C8102E' }} />
+                  Unsichersten Frame — #{lowestConfFrame.nr} (Ø {Math.round(lowestConfFrame.avg * 100)}%)
+                </button>
+              )}
               {/* Ghost + Symmetrie Toggles */}
               <div className="flex gap-2">
                 <button
