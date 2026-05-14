@@ -15,16 +15,17 @@ def _angle(p1: tuple, vertex: tuple, p2: tuple) -> float:
     return float(np.degrees(np.arccos(np.clip(np.dot(v1, v2) / (n1 * n2), -1.0, 1.0))))
 
 
-def _find_peaks(arr: np.ndarray, min_prominence: float = 0.01) -> list[int]:
-    """Lokale Maxima in arr mit Mindest-Prominenz (kein scipy nötig)."""
-    peaks = []
-    for i in range(1, len(arr) - 1):
-        if arr[i] >= arr[i - 1] and arr[i] > arr[i + 1]:
-            left_min = float(np.min(arr[max(0, i - 6):i]))
-            right_min = float(np.min(arr[i + 1:min(len(arr), i + 7)]))
-            if (arr[i] - left_min) >= min_prominence and (arr[i] - right_min) >= min_prominence:
-                peaks.append(i)
-    return peaks
+def _find_peaks(arr: np.ndarray, min_prominence: float = 0.02) -> list[int]:
+    """Lokale Maxima via Savitzky-Golay-Glättung + scipy find_peaks mit Prominenz-Filter."""
+    from scipy.signal import find_peaks as _scipy_peaks, savgol_filter as _savgol
+    if len(arr) < 7:
+        return []
+    win = min(7, len(arr) if len(arr) % 2 == 1 else len(arr) - 1)
+    if win < 3:
+        return []
+    smooth = _savgol(arr, window_length=win, polyorder=min(3, win - 1))
+    peaks, _ = _scipy_peaks(smooth, prominence=min_prominence, distance=3)
+    return peaks.tolist()
 
 
 def _find_foot_on_events(
@@ -78,6 +79,55 @@ def _smooth(a: np.ndarray, window: int = 5) -> np.ndarray:
     if len(a) < window:
         return a
     return np.convolve(a, np.ones(window) / window, mode="same")
+
+
+def _clean_trajectory(arr: np.ndarray, max_jump: float = 0.05, max_gap: int = 5) -> np.ndarray:
+    """Displacement-Filterung + Cubic-Spline-Interpolation für Keypoint-Trajektorien.
+
+    max_jump: Maximaler erlaubter Frame-zu-Frame-Sprung (normiert, bbox-relativ).
+              > 5% bbox-Höhe in einem Frame = MMPose-Fehldetektion → als NaN markieren.
+    max_gap:  Maximale Lückenlänge für Interpolation. Längere Lücken bleiben NaN.
+    """
+    if len(arr) < 3:
+        return arr
+    cleaned = arr.astype(float).copy()
+    # Displacement-Filter: sprunghafte Änderungen als NaN markieren
+    diffs = np.abs(np.diff(cleaned))
+    for i, d in enumerate(diffs):
+        if d > max_jump:
+            cleaned[i + 1] = np.nan
+    # Kurze NaN-Lücken (≤ max_gap) per Cubic-Spline interpolieren
+    nan_mask = np.isnan(cleaned)
+    if not nan_mask.any():
+        return cleaned
+    x_valid = np.where(~nan_mask)[0]
+    if len(x_valid) < 4:  # Zu wenig Punkte für Cubic-Spline
+        # Linearer Fallback
+        cleaned = np.interp(
+            np.arange(len(cleaned)), x_valid, cleaned[x_valid]
+        )
+        return cleaned
+    from scipy.interpolate import CubicSpline
+    cs = CubicSpline(x_valid, cleaned[x_valid])
+    x_all = np.arange(len(cleaned))
+    interpolated = cs(x_all)
+    # Nur Lücken ≤ max_gap füllen
+    nan_indices = np.where(nan_mask)[0]
+    # Lücken segmentieren
+    if len(nan_indices) > 0:
+        gaps = np.split(nan_indices, np.where(np.diff(nan_indices) != 1)[0] + 1)
+        for gap in gaps:
+            if len(gap) <= max_gap:
+                cleaned[gap] = interpolated[gap]
+            # Längere Lücken: mit Nachbarwerten auffüllen (forward-fill)
+            else:
+                for idx in gap:
+                    prev = idx - 1
+                    while prev >= 0 and np.isnan(cleaned[prev]):
+                        prev -= 1
+                    if prev >= 0:
+                        cleaned[idx] = cleaned[prev]
+    return cleaned
 
 
 @dataclass
@@ -323,6 +373,25 @@ class GaitDetector:
 
         if len(lh) < self.MIN_FRAMES:
             return None
+
+        # refineDLC-Pipeline: Displacement-Filter + Spline-Interpolation vor Peak-Detektion
+        lh = _clean_trajectory(lh)
+        lf = _clean_trajectory(lf)
+        rh = _clean_trajectory(rh)
+        rf = _clean_trajectory(rf)
+
+        # Adaptive Fensterkorrektur: Wenn Stride-Periode aus FFT schätzbar, prüfen ob
+        # aktuelles Fenster mindestens 2 Stride-Zyklen enthält
+        if len(lh) >= 16:
+            fft_mag = np.abs(np.fft.rfft(lh - np.mean(lh)))
+            freqs = np.fft.rfftfreq(len(lh))
+            dominant_idx = int(np.argmax(fft_mag[1:]) + 1)  # DC-Anteil überspringen
+            if dominant_idx > 0 and freqs[dominant_idx] > 0:
+                estimated_stride_frames = int(round(1.0 / freqs[dominant_idx]))
+                # Nur als Info nutzen; Fensteranpassung geschieht über WINDOW-Parameter
+                # Wenn Stride-Periode > WINDOW/2, ist Klassifikation unzuverlässig → None
+                if estimated_stride_frames > len(lh) * 0.6:
+                    return None  # Fenster zu klein für zuverlässige LAP-Berechnung
 
         lh_s = _smooth(lh, self.smooth_window)
         lf_s = _smooth(lf, self.smooth_window)
