@@ -1,5 +1,7 @@
 from datetime import datetime, timezone
 
+from typing import Optional
+
 from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Index, Integer, SmallInteger, String, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -61,6 +63,7 @@ class Frame(Base):
     timestamp_ms: Mapped[float | None] = mapped_column(Float, nullable=True)
     gait: Mapped[str | None] = mapped_column(String, nullable=True)
     is_side_view: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    speed_ms: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
 
     video: Mapped["Video"] = relationship("Video", back_populates="frames")
     keypoints: Mapped[list["Keypoint"]] = relationship("Keypoint", back_populates="frame", cascade="all, delete-orphan")

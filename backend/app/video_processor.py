@@ -120,11 +120,12 @@ class _DbWriter:
         gait: str | None = None,
         is_side_view: bool | None = None,
         write_keypoints: bool = True,
+        speed_ms: float | None = None,
     ) -> None:
         from psycopg.types.json import Jsonb  # type: ignore
         self._cur.execute(
-            "INSERT INTO frames (video_id, frame_nr, timestamp_ms, gait, is_side_view) VALUES (%s, %s, %s, %s, %s) RETURNING id",
-            (self._video_id, frame_nr, timestamp_ms, gait, is_side_view),
+            "INSERT INTO frames (video_id, frame_nr, timestamp_ms, gait, is_side_view, speed_ms) VALUES (%s, %s, %s, %s, %s, %s) RETURNING id",
+            (self._video_id, frame_nr, timestamp_ms, gait, is_side_view, speed_ms),
         )
         row = self._cur.fetchone()
         if row and write_keypoints and keypoints_data:
@@ -445,7 +446,8 @@ class VideoProcessor:
                         ]
                         try:
                             db_writer.write(actual_frame_nr, timestamp_ms, kp_data, current_gait,
-                                           is_side_view=is_analyzable, write_keypoints=is_analyzable)
+                                           is_side_view=is_analyzable, write_keypoints=is_analyzable,
+                                           speed_ms=gait_result.speed_ms)
                         except Exception:
                             logger.exception("Keypoint-DB-Write fehlgeschlagen (frame %d)", actual_frame_nr)
 

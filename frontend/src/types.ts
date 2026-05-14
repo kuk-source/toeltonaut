@@ -147,6 +147,7 @@ export interface KeypointEntry {
 export interface FrameKeypoints {
   keypoints: KeypointEntry[]
   gait?: string | null
+  speed_ms?: number | null
 }
 
 export interface GaitSegment {

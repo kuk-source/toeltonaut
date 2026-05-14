@@ -183,6 +183,7 @@ class KeypointEntry(BaseModel):
 class FrameKeypoints(BaseModel):
     keypoints: List[KeypointEntry]
     gait: Optional[str] = None
+    speed_ms: Optional[float] = None
 
 
 class GaitSegment(BaseModel):

@@ -26,3 +26,7 @@ async def init_db() -> None:
         await conn.execute(text(
             "ALTER TABLE videos ADD COLUMN IF NOT EXISTS stockmass_cm INTEGER"
         ))
+        # Migration G3: speed_ms pro Frame (für bestehende DBs)
+        await conn.execute(text(
+            "ALTER TABLE frames ADD COLUMN IF NOT EXISTS speed_ms FLOAT"
+        ))

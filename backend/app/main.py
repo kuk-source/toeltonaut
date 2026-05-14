@@ -1743,11 +1743,12 @@ async def get_frame_keypoints(
         return FrameKeypoints(keypoints=[])
 
     frame_gait = frame_row.gait
+    frame_speed_ms: Optional[float] = frame_row.speed_ms
 
     # Nicht-auswertbare Frames (Pferd zu weit weg / verdeckt / kein Seitenprofil):
     # Gangart-Label zurückgeben (für Timeline), aber keine Keypoints anzeigen.
     if frame_row.is_side_view is False:
-        return FrameKeypoints(keypoints=[], gait=frame_gait)
+        return FrameKeypoints(keypoints=[], gait=frame_gait, speed_ms=frame_speed_ms)
 
     # Annotations (manuell korrigiert) haben Vorrang
     ann_result = await db.execute(
@@ -1760,7 +1761,7 @@ async def get_frame_keypoints(
             KeypointEntry(name=e["name"], x=float(e.get("x", 0)),
                           y=float(e.get("y", 0)), confidence=float(e.get("confidence", 2.0)))
             for e in data if isinstance(e, dict) and "name" in e
-        ], gait=frame_gait)
+        ], gait=frame_gait, speed_ms=frame_speed_ms)
 
     # Fallback: ML-Keypoints
     kp_result = await db.execute(
@@ -1775,7 +1776,7 @@ async def get_frame_keypoints(
                     name=entry["name"], x=float(entry.get("x", 0)),
                     y=float(entry.get("y", 0)), confidence=float(entry.get("confidence", 0)),
                 ))
-    return FrameKeypoints(keypoints=keypoints, gait=frame_gait)
+    return FrameKeypoints(keypoints=keypoints, gait=frame_gait, speed_ms=frame_speed_ms)
 
 
 @app.post("/api/annotations/{job_id}/{frame_nr}")

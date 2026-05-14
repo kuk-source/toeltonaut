@@ -140,7 +140,7 @@ function formatTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`
 }
 
-type KpCacheEntry = { keypoints: KeypointEntry[]; gait: string | null }
+type KpCacheEntry = { keypoints: KeypointEntry[]; gait: string | null; speedMs?: number | null }
 
 export default function VideoPlayer({ jobId, onTimeUpdate, seekToMs, fps, horseName, speedMs }: VideoPlayerProps) {
   const { t } = useTranslation()
@@ -149,12 +149,13 @@ export default function VideoPlayer({ jobId, onTimeUpdate, seekToMs, fps, horseN
   const containerRef = useRef<HTMLDivElement>(null)
 
   // Refs für rAF-Loop (kein React-State auf dem kritischen Pfad)
-  const kpRef          = useRef<KeypointEntry[]>([])
-  const gaitRef        = useRef<string | null>(null)
-  const showKpRef      = useRef(false)
-  const showGaitRef    = useRef(true)
-  const horseNameRef   = useRef(horseName)
-  const speedMsRef     = useRef(speedMs)
+  const kpRef            = useRef<KeypointEntry[]>([])
+  const gaitRef          = useRef<string | null>(null)
+  const showKpRef        = useRef(false)
+  const showGaitRef      = useRef(true)
+  const horseNameRef     = useRef(horseName)
+  const speedMsRef       = useRef(speedMs)
+  const frameSpeedMsRef  = useRef<number | null | undefined>(undefined)
   const rvfcHandleRef  = useRef(0)
   const jobIdRef       = useRef(jobId)
   const fpsRef         = useRef(fps ?? ESTIMATED_FPS)
@@ -175,7 +176,7 @@ export default function VideoPlayer({ jobId, onTimeUpdate, seekToMs, fps, horseN
   // Refs mit State/Props synchron halten
   useEffect(() => { horseNameRef.current = horseName }, [horseName])
   useEffect(() => { speedMsRef.current = speedMs }, [speedMs])
-  useEffect(() => { jobIdRef.current = jobId; kpCacheRef.current.clear(); fetchingFrames.current.clear() }, [jobId])
+  useEffect(() => { jobIdRef.current = jobId; kpCacheRef.current.clear(); fetchingFrames.current.clear(); frameSpeedMsRef.current = undefined }, [jobId])
   useEffect(() => { fpsRef.current = fps ?? ESTIMATED_FPS }, [fps])
   useEffect(() => { showKpRef.current = showKeypoints }, [showKeypoints])
   useEffect(() => { showGaitRef.current = showGaitLabel }, [showGaitLabel])
@@ -197,7 +198,7 @@ export default function VideoPlayer({ jobId, onTimeUpdate, seekToMs, fps, horseN
     fetchingFrames.current.add(frameNr)
     getFrameKeypoints(jobIdRef.current, frameNr, tMs)
       .then(d => {
-        const entry: KpCacheEntry = { keypoints: d.keypoints, gait: d.gait ?? null }
+        const entry: KpCacheEntry = { keypoints: d.keypoints, gait: d.gait ?? null, speedMs: d.speed_ms ?? null }
         kpCacheRef.current.set(frameNr, entry)
         // Cache-Größe begrenzen: älteste Einträge löschen
         if (kpCacheRef.current.size > CACHE_MAX) {
@@ -227,8 +228,12 @@ export default function VideoPlayer({ jobId, onTimeUpdate, seekToMs, fps, horseN
       const ctx = canvas.getContext('2d')
       if (!ctx) return
       ctx.clearRect(0, 0, canvas.width, canvas.height)
+      // Per-Frame-Geschwindigkeit hat Vorrang, Fallback auf Job-Level-Prop
+      const effectiveSpeedMs = frameSpeedMsRef.current !== undefined
+        ? frameSpeedMsRef.current
+        : speedMsRef.current
       if (showKpRef.current)   drawKeypoints(ctx, video, kpRef.current)
-      if (showGaitRef.current) drawGaitOverlay(ctx, video, gaitRef.current, horseNameRef.current, speedMsRef.current)
+      if (showGaitRef.current) drawGaitOverlay(ctx, video, gaitRef.current, horseNameRef.current, effectiveSpeedMs)
     }
 
     const onFrame = (_now: number, metadata: RvfcMetadata) => {
@@ -238,8 +243,9 @@ export default function VideoPlayer({ jobId, onTimeUpdate, seekToMs, fps, horseN
         const tMs     = metadata.mediaTime * 1000
         const cached  = kpCacheRef.current.get(frameNr)
         if (cached) {
-          kpRef.current   = cached.keypoints
-          gaitRef.current = cached.gait
+          kpRef.current          = cached.keypoints
+          gaitRef.current        = cached.gait
+          frameSpeedMsRef.current = cached.speedMs
         }
         prefetchFrame(frameNr, tMs)
         for (let a = 1; a <= PREFETCH_AHEAD; a++) {
@@ -271,8 +277,11 @@ export default function VideoPlayer({ jobId, onTimeUpdate, seekToMs, fps, horseN
     const ctx = canvas.getContext('2d')
     if (!ctx) return
     ctx.clearRect(0, 0, canvas.width, canvas.height)
+    const effectiveSpeedMs = frameSpeedMsRef.current !== undefined
+      ? frameSpeedMsRef.current
+      : speedMsRef.current
     if (showKeypoints) drawKeypoints(ctx, video, kpRef.current)
-    if (showGaitLabel) drawGaitOverlay(ctx, video, gaitRef.current, horseNameRef.current, speedMsRef.current)
+    if (showGaitLabel) drawGaitOverlay(ctx, video, gaitRef.current, horseNameRef.current, effectiveSpeedMs)
   }, [showKeypoints, showGaitLabel])
 
   // Video-Events für UI-State (Fortschrittsbalken, Zeitanzeige)
