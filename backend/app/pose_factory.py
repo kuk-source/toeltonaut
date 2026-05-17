@@ -1,9 +1,11 @@
 """Factory: wählt Pose-Estimator anhand config.yaml aus.
 
 Reihenfolge:
-  1. model_version == "v0.2-mmpose" und pose_model gesetzt → MMPosePoseEstimator
+  1. model_version == "v0.2-rtmpose" und pose_model gesetzt → OnnxPoseEstimator
+     (bei ImportError oder FileNotFoundError automatischer Fallback auf v0.2-mmpose)
+  2. model_version == "v0.2-mmpose" und pose_model gesetzt → MMPosePoseEstimator
      (bei ImportError oder RuntimeError automatischer Fallback auf v0.1)
-  2. Alles andere → PropPoseEstimator (v0.1, kein Modell-Download)
+  3. Alles andere → PropPoseEstimator (v0.1, kein Modell-Download)
 """
 from __future__ import annotations
 
@@ -23,6 +25,18 @@ def get_pose_estimator() -> BasePoseEstimator:
         return _estimator
 
     cfg = get_ai_config()
+
+    if cfg.model_version == "v0.2-rtmpose" and cfg.pose_model:
+        try:
+            from .onnx_pose_estimator import OnnxPoseEstimator
+
+            _estimator = OnnxPoseEstimator(model_path=cfg.pose_model)
+            logger.info("ONNX Pose-Estimator geladen (v0.2-rtmpose).")
+            return _estimator
+        except Exception as exc:
+            logger.warning(
+                "ONNX nicht verfügbar (%s) – Fallback auf MMPose.", exc
+            )
 
     if cfg.model_version == "v0.2-mmpose" and cfg.pose_model:
         try:
