@@ -54,6 +54,40 @@
         <div class="timeline-version">[Unveröffentlicht] <span class="version-badge v02">In Arbeit</span></div>
         <div class="timeline-date">Hauptbranch</div>
 
+        <h4 class="text-green">Gangartanalyse – refineDLC-Pipeline + robuste Peak-Detektion</h4>
+        <ul>
+          <li><strong>refineDLC-Pipeline:</strong> Displacement-Filter (Sprünge > Schwellwert werden maskiert) + Cubic-Spline-Interpolation für Keypoint-Trajektorien – reduziert Rauschen durch MMPose-Jitter und kurze Okklusionen.</li>
+          <li><strong>Savitzky-Golay + <code>scipy.signal.find_peaks</code>:</strong> Geglättete Fesselgelenk-Trajektorien werden mit Savitzky-Golay-Filter geglättet; Foot-On-Events via <code>find_peaks</code> mit Mindestabstand + Prominenz-Schwelle ermittelt – robuster als Proximity-Methode bei variablem Kamerahub.</li>
+          <li><strong>FFT-basierte Fenstergrößenprüfung:</strong> Vor LAP/DF-Berechnung wird per FFT geprüft, ob der Clip mindestens 2 vollständige Schrittzyklen enthält. Zu kurze oder rauschbehaftete Clips erhalten <code>is_analyzable=False</code> und werden in der TaktTimeline ausgegraut.</li>
+          <li><strong>Sprunggelenke aus DF-Berechnung entfernt:</strong> Hock-Y-Werte (B3) wurden aus der Duty-Factor-Berechnung entfernt – diese lieferten bei schnellem Tölt systematisch zu hohe DF-Werte und führten zur Fehlklassifikation als Schritt. DF basiert jetzt ausschließlich auf den 4 Fesselgelenken.</li>
+          <li><strong>Per-Gangart Geschwindigkeitsobergrenzen:</strong> Unrealistisch hohe Geschwindigkeitswerte (z.&nbsp;B. durch Kamerarucke) werden per Gangart-spezifischen Obergrenzen (Tölt max. 12 m/s, Rennpass max. 18 m/s) gekappt. Stride-Ausreißer-Filter (IQR × 1,5) entfernt Einzelwerte, die nicht in die Schrittsequenz passen.</li>
+        </ul>
+
+        <h4 class="text-green">Geschwindigkeit – Optischer Fluss + Frame-Persistenz</h4>
+        <ul>
+          <li><strong>Optischer Fluss (Kameraschwenk-Korrektur):</strong> Hintergrundpixel außerhalb der Pferd-Bbox werden via <code>cv2.calcOpticalFlowFarneback</code> analysiert; der mittlere Hintergrundfluss wird als Kameraschwenk-Vektor vom Pferd-Bewegungsvektor subtrahiert. Ergibt präzisere Eigengeschwindigkeit des Pferds, unabhängig von Kamerabewegung.</li>
+          <li><strong>Geschwindigkeit pro Frame in DB:</strong> <code>frames.speed_ms</code> (nullable FLOAT) speichert die geschätzte Geschwindigkeit für jeden Frame. <code>GET /api/keypoints/{job_id}/{frame_nr}</code> liefert das Feld mit; der VideoPlayer zeigt die Echtzeit-Geschwindigkeit neben der Frame-Nummer an.</li>
+        </ul>
+
+        <h4 class="text-green">Annotation – Konfidenz-Farbkodierung + Navigation + Ghost</h4>
+        <ul>
+          <li><strong>Keypoint-Farbkodierung nach Konfidenz:</strong> Keypoints werden farblich nach ihrer Konfidenz dargestellt: Rot (&lt; 0,3), Orange (0,3–0,5), Grün (0,5–0,8), Blau für manuell korrigierte Keypoints (Konfidenz = 2,0). Ersetzt den bisherigen einheitlichen gestrichelten Ring bei &lt; 50%.</li>
+          <li><strong>Navigation zum unsichersten Frame:</strong> Klick auf den „Unsicherster Frame"-Indikator in der Sidebar springt direkt zum Frame mit dem niedrigsten mittleren Konfidenz-Score im Video.</li>
+          <li><strong>Onion-Skin Ghost (G-Taste):</strong> Halbtransparentes Overlay des vorherigen Frames hinter dem aktuellen Canvas – zeigt Bewegungsrichtung beim manuellen Korrigieren. Per G-Taste ein-/ausschaltbar.</li>
+          <li><strong>Symmetrie-Spiegelung (S-Taste):</strong> Ausgewählter Keypoint wird an der vertikalen Mittellinie gespiegelt und der symmetrische Partner (z.&nbsp;B. LF → RF) automatisch auf die gespiegelte Position gesetzt. Beschleunigt symmetrische Korrekturen erheblich.</li>
+        </ul>
+
+        <h4 class="text-green">UI – Doku-Link + Neu-analysieren-Dialog</h4>
+        <ul>
+          <li><strong>Doku-Link im Header:</strong> Neuer „Docs"-Link im App-Header öffnet <code>/docs/</code> in einem neuen Tab – direkt aus der App zugänglich.</li>
+          <li><strong>„Neu analysieren"-Dialog:</strong> Überarbeiteter Neuanalyse-Flow mit Modal-Dialog: Wahl zwischen Schnell-Modus (nur Gangart-Erkennung, Keypoints aus DB) und Vollständig-Modus (komplette Video-Reprocessing inkl. MMPose). Direkter Doku-Link zum Algorithmus-Artikel im Dialog.</li>
+        </ul>
+
+        <h4 class="text-green">Per-Frame-Keypoint-Rendering + output_fps</h4>
+        <ul>
+          <li><strong>Per-Frame-Rendering via requestAnimationFrame:</strong> Keypoint-Canvas-Layer wird jetzt frame-synchron gerendert; <code>output_fps</code>-Feld in der Job-Response gibt die tatsächliche FPS des verarbeiteten Videos zurück und wird im VideoPlayer für korrekte Zeitberechnung verwendet.</li>
+        </ul>
+
         <h4 class="text-green">Bugfix – Geschwindigkeitsphantomwerte + DF-Fehler bei schnellem Tölt</h4>
         <ul>
           <li><strong>Phantom-Speed entfernt:</strong> Der <code>_speed_dx_norm</code>-Fallback (bbox-Mittelpunkt-Bewegung) lieferte ~2,2 km/h auch bei statischen Videos, weil er Kameraschwenks nicht von echter Pferd-Bewegung trennte. Der Fallback wurde vollständig entfernt. Geschwindigkeitsschätzung erfolgt jetzt ausschließlich über <strong>Schrittlänge × Schrittfrequenz</strong> (<code>v = stride_length_m × stride_freq_hz</code>) – nur aktiv wenn <code>stockmass_cm</code> angegeben und Foot-On-Events detektierbar.</li>

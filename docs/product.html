@@ -50,6 +50,7 @@
       <a href="#sprint-j">Sprint J – 1-Klick-Training</a>
       <a href="#sprint-k">Sprint K – Gangart-Multiselect</a>
       <a href="#sprint-l">Sprint L – Training in Admin</a>
+      <a href="#sprint-m">Sprint M – Gait-Präzision + Annotation</a>
       <a href="#sprint-bugfixes">Bugfixes &amp; Quick Wins</a>
     </div>
     <div class="sidebar-section">
@@ -529,6 +530,66 @@
       </div>
     </section>
 
+    <section id="sprint-m" class="section-anchor">
+      <h2>Sprint M – Gangartanalyse-Präzision + Annotation-Ergonomie <span class="status-pill status-done" style="font-size:.75rem;">Abgeschlossen</span></h2>
+      <p style="color:var(--muted);">
+        <strong>Ziel:</strong> Robustere LAP/DF-Berechnung via refineDLC + Savitzky-Golay; kameraschwenk-korrigierte Geschwindigkeitsmessung per optischem Fluss; Annotationstool um Konfidenz-Farbkodierung, Ghost-Modus und Symmetrie-Spiegelung erweitert.
+      </p>
+      <div class="sprint-card">
+        <div class="sprint-header">
+          <span class="sprint-tag sprint-tag-active">Sprint M</span>
+          <strong>refineDLC + Optischer Fluss + Annotation-UX</strong>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Story</th><th>Beschreibung</th><th>SP</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>US-M1</td>
+              <td><strong>refineDLC-Pipeline:</strong> Displacement-Filter + Cubic-Spline-Interpolation auf Keypoint-Trajektorien; Savitzky-Golay + <code>scipy.signal.find_peaks</code> für Foot-On-Detektion; FFT-Fenstergrößenprüfung für unzuverlässige Kurzclips</td>
+              <td><span class="sp-badge">8</span></td>
+              <td><span class="status-pill status-done">✓ Fertig</span></td>
+            </tr>
+            <tr>
+              <td>US-M2</td>
+              <td><strong>Sprunggelenke aus DF entfernt + Geschwindigkeitsobergrenzen:</strong> Hock-Y aus DF-Berechnung entfernt (verhindert Fehlklassifikation Tölt→Schritt); per-Gangart Obergrenzen + Stride-Ausreißer-Filter (IQR × 1,5)</td>
+              <td><span class="sp-badge">3</span></td>
+              <td><span class="status-pill status-done">✓ Fertig</span></td>
+            </tr>
+            <tr>
+              <td>US-M3</td>
+              <td><strong>Optischer Fluss (Kameraschwenk-Korrektur):</strong> Hintergrundfluss via <code>cv2.calcOpticalFlowFarneback</code> subtrahiert – präzisere Eigengeschwindigkeit unabhängig von Kamerabewegung</td>
+              <td><span class="sp-badge">5</span></td>
+              <td><span class="status-pill status-done">✓ Fertig</span></td>
+            </tr>
+            <tr>
+              <td>US-M4</td>
+              <td><strong>Geschwindigkeit pro Frame in DB:</strong> <code>frames.speed_ms</code> gespeichert; VideoPlayer zeigt Echtzeit-Geschwindigkeit; <code>output_fps</code> in Job-Response für genaue Zeitberechnung</td>
+              <td><span class="sp-badge">3</span></td>
+              <td><span class="status-pill status-done">✓ Fertig</span></td>
+            </tr>
+            <tr>
+              <td>US-M5</td>
+              <td><strong>Annotation – Konfidenz-Farbkodierung:</strong> Keypoints in Rot/Orange/Grün/Blau (manuell) je nach Konfidenz; Navigation zum unsichersten Frame per Klick</td>
+              <td><span class="sp-badge">3</span></td>
+              <td><span class="status-pill status-done">✓ Fertig</span></td>
+            </tr>
+            <tr>
+              <td>US-M6</td>
+              <td><strong>Annotation – Onion-Skin Ghost (G) + Symmetrie-Spiegelung (S):</strong> Ghost-Overlay des Vorframes; automatische Symmetrie-Platzierung des Partner-Keypoints per S-Taste</td>
+              <td><span class="sp-badge">3</span></td>
+              <td><span class="status-pill status-done">✓ Fertig</span></td>
+            </tr>
+            <tr>
+              <td>US-M7</td>
+              <td><strong>UI – Doku-Link + Neu-analysieren-Dialog:</strong> Docs-Link im Header; Neuanalyse-Modal mit Schnell/Vollständig-Wahl und Algorithmus-Doku-Link</td>
+              <td><span class="sp-badge">2</span></td>
+              <td><span class="status-pill status-done">✓ Fertig</span></td>
+            </tr>
+          </tbody>
+        </table></div>
+      </div>
+    </section>
+
     <section id="sprint-bugfixes" class="section-anchor">
       <h2>Bugfixes &amp; Quick Wins <span class="status-pill status-done" style="font-size:.75rem;">Abgeschlossen</span></h2>
       <p style="color:var(--muted);">
@@ -625,6 +686,12 @@
             <td>Präzision &amp; UX</td>
             <td>requestVideoFrameCallback (kein Keypoint-Lag), Stride-Speed (kein Phantom), DF-Perzentil-Fix, is_analyzable-Flag, Annotations-Quick-Wins (A/D, Undo/Redo, Tab), .env.example, Sprint K (Multiselect), Sprint L (Admin-Cleanup)</td>
           </tr>
+          <tr>
+            <td><strong>Sprint M – Gait-Präzision + Annotation</strong></td>
+            <td><span class="status-pill status-done">Abgeschlossen</span></td>
+            <td>Präzision &amp; Ergonomie</td>
+            <td>refineDLC-Pipeline (Displacement-Filter + Spline), Savitzky-Golay + scipy find_peaks, FFT-Fensterprüfung, Sprunggelenke aus DF entfernt, Stride-Ausreißer-Filter, Optischer Fluss (Kameraschwenk-Korrektur), Geschwindigkeit pro Frame in DB, Konfidenz-Farbkodierung, Onion-Skin Ghost, Symmetrie-Spiegelung, Doku-Link im Header, Neu-analysieren-Dialog</td>
+          </tr>
         </tbody>
       </table></div>
     </section>
@@ -652,7 +719,7 @@
           <tr><td>US-2.0</td><td>Gangart-Erkennung: aktuelle Gangart live im Video einblenden (mit Debounce 10 Frames)</td><td>5</td><td><span class="status-pill status-done">✓ v0.2 aktiv, Debounce gegen Flackern</span></td></tr>
           <tr><td>US-2.1</td><td>22-KP Skelett-Erkennung via MMPose HRNet-W32, farblich nach Körperzone differenziert</td><td>13</td><td><span class="status-pill status-done">✓ MMPose v0.2 aktiv, Overlay in VideoPlayer + AnnotationTool</span></td></tr>
           <tr><td>US-2.1b</td><td>Focus-Lock: konsistentes Fokuspferd über alle Frames (Zentrum-Distanz-Tracking); Algorithmus + Annotations-UI referenzieren dasselbe Pferd</td><td>2</td><td><span class="status-pill status-done">✓ video_processor.py locked_cx/cy</span></td></tr>
-          <tr><td>US-2.2</td><td>Tölt-Analyse: LAP/DF, Trabeinlagen, Takt-Score, Subklassifikation</td><td>8</td><td><span class="status-pill status-done">✓ Backend + Frontend (TaktTimeline, ToltScoreCard)</span></td></tr>
+          <tr><td>US-2.2</td><td>Tölt-Analyse: LAP/DF, Trabeinlagen, Takt-Score, Subklassifikation</td><td>8</td><td><span class="status-pill status-done">✓ Erweitert – refineDLC-Pipeline + LAP/DF-Fixes (Sprint M); Sprunggelenke aus DF entfernt</span></td></tr>
           <tr><td>US-2.3</td><td>Rennpass-Analyse: Lateral-Sync, Pass-Score, Geschwindigkeit</td><td>8</td><td><span class="status-pill status-done">✓ Backend + Frontend (RennpassScoreCard)</span></td></tr>
         </tbody>
       </table></div>
@@ -661,7 +728,7 @@
       <div class="table-wrap"><table>
         <thead><tr><th>Story</th><th>Beschreibung</th><th>SP</th><th>Status</th></tr></thead>
         <tbody>
-          <tr><td>US-3.1</td><td>Video im Browser + Download, Frame-Navigation</td><td>5</td><td><span class="status-pill status-done">✓ VideoPlayer-Komponente</span></td></tr>
+          <tr><td>US-3.1</td><td>Video im Browser + Download, Frame-Navigation</td><td>5</td><td><span class="status-pill status-done">✓ VideoPlayer-Komponente + Echtzeit-Geschwindigkeit pro Frame (Sprint M)</span></td></tr>
           <tr><td>US-3.1b</td><td>iOS-Sticker-Kontureffekt: yolov8n-seg liefert Pixel-Masken für Pferd+Reiter; zweischichtiger Glow + morphologischer Gradientrand in Gletscherblau</td><td>3</td><td><span class="status-pill status-done">✓ draw_subject_outline() in Video-Output</span></td></tr>
           <tr><td>US-3.1c</td><td>Kleine Gelenkpunkte im verarbeiteten Video (r=3px, 60% Alpha) – kleiner als Annotations-UI, aber sichtbar</td><td>1</td><td><span class="status-pill status-done">✓ draw_keypoints_small()</span></td></tr>
           <tr><td>US-3.2</td><td>Takt-Timeline: 4 Spuren (VL/VR/HL/HR), sync mit Video</td><td>8</td><td><span class="status-pill status-done">✓ TaktTimeline-Komponente mit Fehler-Overlay + nicht-auswertbare Frames</span></td></tr>
@@ -673,7 +740,7 @@
         <thead><tr><th>Story</th><th>Beschreibung</th><th>SP</th><th>Status</th></tr></thead>
         <tbody>
           <tr><td>US-4.0</td><td>Lern-Video hochladen: Gangart-Label, Keypoints in DB; LernStatus-Anzeige (Statistik-Kacheln, Gangart-Verteilung)</td><td>3</td><td><span class="status-pill status-done">✓ Backend + Frontend (LernStatus-Komponente)</span></td></tr>
-          <tr><td>US-4.1</td><td>Browser-Annotationstool: Keypoints korrigieren, Zoom/Pan, Skelett-Overlay, COCO-JSON-Export, Unsaved-Changes-Dialog, Konfidenz-Visualisierung (< 0,5 = unsicher)</td><td>13</td><td><span class="status-pill status-done">✓ Vollständig implementiert + verdrahtet</span></td></tr>
+          <tr><td>US-4.1</td><td>Browser-Annotationstool: Keypoints korrigieren, Zoom/Pan, Skelett-Overlay, COCO-JSON-Export, Unsaved-Changes-Dialog, Konfidenz-Farbkodierung (Rot/Orange/Grün/Blau), Onion-Skin Ghost (G), Symmetrie-Spiegelung (S), Tastatur-Navigation A/D, Undo/Redo, Tab → unsicherster KP</td><td>13</td><td><span class="status-pill status-done">✓ Vollständig + Sprint-M-Erweiterungen (Konfidenz-Farben, Ghost, Spiegelung)</span></td></tr>
           <tr><td>US-4.2</td><td>Modellversionen verwalten, Rollback</td><td>5</td><td><span class="status-pill status-done">✓ Rollback-UI (AKTIV-Badge, „Rollback auf dieses Modell"-Button) + DB-Fallback nach Neustart</span></td></tr>
           <tr><td>US-4.3</td><td>PostgreSQL-Schema: videos/frames/keypoints/annotations/training_jobs</td><td>8</td><td><span class="status-pill status-done">✓ DB-Modelle implementiert</span></td></tr>
         </tbody>
@@ -759,6 +826,18 @@
           <tr><td>Gangart-Multiselect im Upload (Sprint K)</td><td>✓ API</td><td>✓ UploadZone Checkboxen</td><td>✓ Sprint K</td></tr>
           <tr><td>Gait-Labels als Pills (Sprint K)</td><td>–</td><td>✓ VideoLibrary + Video-Detail</td><td>✓ Sprint K</td></tr>
           <tr><td>.env.example + Docker-Compose-Secrets (GitHub-sicher)</td><td>✓</td><td>–</td><td>✓ Post-v1.0</td></tr>
+          <tr><td>refineDLC-Pipeline (Displacement-Filter + Spline-Interpolation)</td><td>✓ gait_detector.py</td><td>–</td><td>✓ Sprint M</td></tr>
+          <tr><td>Savitzky-Golay + scipy find_peaks für Foot-On-Erkennung</td><td>✓ gait_detector.py</td><td>–</td><td>✓ Sprint M</td></tr>
+          <tr><td>Sprunggelenke aus DF entfernt (kein Tölt→Schritt-Fehler mehr)</td><td>✓ gait_detector.py</td><td>–</td><td>✓ Sprint M</td></tr>
+          <tr><td>Stride-Ausreißer-Filter + Per-Gangart Geschwindigkeitsobergrenzen</td><td>✓ gait_detector.py</td><td>–</td><td>✓ Sprint M</td></tr>
+          <tr><td>Optischer Fluss – Kameraschwenk-Korrektur für Geschwindigkeit</td><td>✓ video_processor.py</td><td>–</td><td>✓ Sprint M</td></tr>
+          <tr><td>Geschwindigkeit pro Frame in DB (<code>frames.speed_ms</code>)</td><td>✓ DB + API</td><td>✓ VideoPlayer Echtzeit-Anzeige</td><td>✓ Sprint M</td></tr>
+          <tr><td>Annotation – Konfidenz-Farbkodierung (Rot/Orange/Grün/Blau)</td><td>–</td><td>✓ AnnotationTool</td><td>✓ Sprint M</td></tr>
+          <tr><td>Annotation – Navigation zum unsichersten Frame</td><td>–</td><td>✓ AnnotationTool Sidebar</td><td>✓ Sprint M</td></tr>
+          <tr><td>Annotation – Onion-Skin Ghost (G-Taste)</td><td>–</td><td>✓ AnnotationTool</td><td>✓ Sprint M</td></tr>
+          <tr><td>Annotation – Symmetrie-Spiegelung (S-Taste)</td><td>–</td><td>✓ AnnotationTool</td><td>✓ Sprint M</td></tr>
+          <tr><td>Doku-Link im App-Header</td><td>–</td><td>✓ Header</td><td>✓ Sprint M</td></tr>
+          <tr><td>Neu-analysieren-Dialog (Schnell/Vollständig)</td><td>✓ POST /api/job/{id}/reanalyse</td><td>✓ Modal-Dialog mit Modus-Wahl</td><td>✓ Sprint M</td></tr>
         </tbody>
       </table></div>
     </section>
