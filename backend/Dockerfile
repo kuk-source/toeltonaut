@@ -84,6 +84,13 @@ m = init_model('/app/models/horse10_hrnet_w32_1x.py', \
 print('MMPose Horse-10 OK –', m.dataset_meta.get('num_keypoints', '?'), 'KP'); \
 "
 
+# ── ONNX-Export: HRNet-W32 Horse-10 (einmalig, Layer wird gecacht) ────────────
+# onnxscript nur zur Build-Zeit nötig; onnxruntime kommt aus requirements.txt
+COPY models/export_onnx.py /tmp/export_onnx.py
+RUN pip install --no-cache-dir onnxscript && \
+    python /tmp/export_onnx.py && \
+    rm /tmp/export_onnx.py
+
 # ── App-Code (nach Modellen – so wird der Modell-Layer gecacht) ───────────────
 COPY app/ ./app/
 
