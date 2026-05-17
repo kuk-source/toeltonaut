@@ -182,6 +182,7 @@ export default function AnnotationTool({ jobId, onClose }: Props) {
   const [saving, setSaving] = useState(false)
   const [saveMsg, setSaveMsg] = useState<string | null>(null)
   const [savedFlash, setSavedFlash] = useState(false)
+  const [copyMsg, setCopyMsg] = useState<string | null>(null)
   const [imgNaturalSize, setImgNaturalSize] = useState<{ w: number; h: number } | null>(null)
   const [imgDisplaySize, setImgDisplaySize] = useState<{ w: number; h: number } | null>(null)
   const [imgError, setImgError] = useState(false)
@@ -330,12 +331,26 @@ export default function AnnotationTool({ jobId, onClose }: Props) {
       const isActive = i === activeKpIndex
       const isHover = i === hoverKpIndex
       const r = isActive || isHover ? RADIUS_ACTIVE : RADIUS_NORMAL
-      const isManual  = kp.confidence >= 2.0
-      const isLowConf = !isManual && kp.confidence < 0.3
+      const isManual    = kp.confidence >= 2.0
+      const isOccluded  = kp.confidence === 0.0
+      const isLowConf   = !isManual && !isOccluded && kp.confidence < 0.3
       const color = keypointColor(kp.confidence, isManual)
 
       ctx.shadowColor = 'rgba(0,0,0,0.7)'
       ctx.shadowBlur = 5
+
+      // Okkludiert: gestrichelter oranger Ring
+      if (isOccluded) {
+        ctx.save()
+        ctx.setLineDash([3, 3])
+        ctx.beginPath()
+        ctx.arc(cx, cy, RADIUS_NORMAL + 3, 0, Math.PI * 2)
+        ctx.strokeStyle = 'rgba(255,165,0,0.7)'
+        ctx.lineWidth = 1.5
+        ctx.stroke()
+        ctx.setLineDash([])
+        ctx.restore()
+      }
 
       // Niedrige Konfidenz: gestrichelter roter Ring außen
       if (isLowConf && !isActive) {
@@ -622,11 +637,43 @@ export default function AnnotationTool({ jobId, onClose }: Props) {
           setSymmetryLock(v => !v)
           return
         }
+        // C – Keypoints vom Vorgänger-Frame kopieren
+        if (e.key === 'c' || e.key === 'C') {
+          e.preventDefault()
+          void (async () => {
+            if (frameNr <= 0) return
+            try {
+              const data = await getFrameKeypoints(jobId, frameNr - 1)
+              if (!data.keypoints || data.keypoints.length === 0) return
+              const copied = data.keypoints.map(kp => ({ ...kp, confidence: 0.7 }))
+              pushUndo([...keypoints])
+              setKeypoints(copied)
+              setCopyMsg(`Keypoints von Frame ${frameNr - 1} kopiert`)
+              setTimeout(() => setCopyMsg(null), 1500)
+            } catch {
+              // stilles Fail – kein Frame vorhanden
+            }
+          })()
+          return
+        }
+        // Q – Aktiven Keypoint als okkludiert markieren / zurücksetzen
+        if (e.key === 'q' || e.key === 'Q') {
+          e.preventDefault()
+          if (activeKpIndex === null) return
+          pushUndo([...keypoints])
+          setKeypoints(prev =>
+            prev.map((kp, i) => {
+              if (i !== activeKpIndex) return kp
+              return { ...kp, confidence: kp.confidence === 0.0 ? 0.5 : 0.0 }
+            })
+          )
+          return
+        }
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [activeKpIndex, handleUndo, handleRedo, pushUndo, keypoints, frameNr, goToFrame])
+  }, [activeKpIndex, handleUndo, handleRedo, pushUndo, keypoints, frameNr, jobId, goToFrame])
 
   const handleSave = async () => {
     setSaving(true)
@@ -793,6 +840,13 @@ export default function AnnotationTool({ jobId, onClose }: Props) {
                     }}
                   />
                 )}
+              </div>
+            )}
+
+            {/* Copy-Toast */}
+            {copyMsg && (
+              <div className="absolute top-2 right-3 z-20 bg-islandblau/90 border border-gletscherblau/60 rounded-xl px-4 py-2 text-sm text-gletscherblau shadow-lg pointer-events-none">
+                {copyMsg}
               </div>
             )}
 
@@ -986,6 +1040,10 @@ export default function AnnotationTool({ jobId, onClose }: Props) {
                 <span className="w-2 h-2 rounded-full inline-block shrink-0" style={{ backgroundColor: '#A8D8EA' }} />
                 <span>manuell gesetzt</span>
               </div>
+              <div className="flex items-center gap-1.5 text-[10px] text-geysirweiss/50">
+                <span className="w-2 h-2 rounded-full inline-block shrink-0 border border-dashed" style={{ borderColor: 'rgba(255,165,0,0.7)', backgroundColor: 'transparent' }} />
+                <span>okkludiert (Q)</span>
+              </div>
               <div className="mt-2 pt-2 border-t border-geysirweiss/10 space-y-1">
                 <div className="text-[9px] font-semibold uppercase tracking-wider text-geysirweiss/25 mb-1">Tastatur</div>
                 {[
@@ -996,6 +1054,8 @@ export default function AnnotationTool({ jobId, onClose }: Props) {
                   ['Del', 'KP entfernen'],
                   ['G', 'Ghost ein/aus'],
                   ['S', 'Symmetrie an/aus'],
+                  ['C', 'KPs vom Vorgänger kopieren'],
+                  ['Q', 'Okkludiert togglen'],
                   ['Esc', 'Abbrechen'],
                 ].map(([key, desc]) => (
                   <div key={key} className="flex items-center justify-between text-[9px] text-geysirweiss/25">
