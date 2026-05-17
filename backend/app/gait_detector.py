@@ -163,7 +163,7 @@ class GaitDetector:
     _DEFAULT_FETLOCK = {"l_front": 12, "r_front": 13, "l_hind": 14, "r_hind": 15, "withers": 6}
 
     # Sprint G1: Foot-On-Erkennungs-Parameter
-    GROUND_THRESHOLD = 0.05   # Abstand zur Bodenlinie für Foot-On (bbox-relativ)
+    GROUND_THRESHOLD = 0.08   # Abstand zur Bodenlinie für Foot-On (bbox-relativ)
     MIN_STANCE_FRAMES = 3     # Mindest-Standphasen-Länge gegen Rauschen
 
     def __init__(
@@ -201,9 +201,6 @@ class GaitDetector:
         # Bbox-Bewegungsfeatures (v0.1)
         self._bbox_cx: deque[float] = deque(maxlen=self.WINDOW)
         self._bbox_cy: deque[float] = deque(maxlen=self.WINDOW)
-        # Sprint G3: normierte Δx/h-Werte für Geschwindigkeitsschätzung (~1 s Fenster)
-        _speed_buf_size = max(1, int(self.effective_fps))
-        self._speed_dx_norm: deque[float] = deque(maxlen=_speed_buf_size)
         # Geschwindigkeits-Trajektorie: cx, bbox_h und bg_flow synchron für linreg (~2 s Fenster)
         # Alle drei immer zusammen befüllt (nur is_side_view-Frames) → Index-Synchronität garantiert
         _traj_size = max(10, int(self.effective_fps * 2))
@@ -286,11 +283,6 @@ class GaitDetector:
         bbox_cx = float(x1 + x2) / 2.0
         self._bbox_cx.append(bbox_cx)
         self._bbox_cy.append(float(y1 + y2) / 2.0)
-        # Sprint G3: normiertes |Δx|/h für Geschwindigkeitsschätzung (nur Seitenansicht, stabile Bbox)
-        if is_side_view and h > 10 and len(self._bbox_cx) >= 2:
-            prev_cx = self._bbox_cx[-2]
-            dx_norm = abs(bbox_cx - prev_cx) / h
-            self._speed_dx_norm.append(dx_norm)
         # Geschwindigkeits-Trajektorie: cx + h + bg_flow synchron (nur Seitenansicht, Bbox stabil)
         # Alle drei immer im gleichen Frame befüllt → Index-Synchronität garantiert
         if is_side_view and h > 10:
